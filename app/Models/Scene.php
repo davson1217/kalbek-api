@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\CefrLevel;
 use Database\Factories\SceneFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'scenario_id',
     'slug',
     'setting',
+    'cefr_level',
     'sort_order',
 ])]
 class Scene extends Model
@@ -27,7 +29,9 @@ class Scene extends Model
 
     public function npcLines(): HasMany
     {
-        return $this->hasMany(NpcLine::class)->orderBy('sort_order');
+        return $this->hasMany(NpcLine::class)
+            ->orderByDesc('priority')
+            ->orderBy('sort_order');
     }
 
     public function goals(): HasMany
@@ -44,6 +48,7 @@ class Scene extends Model
     {
         return [
             'sort_order' => 'integer',
+            'cefr_level' => CefrLevel::class,
         ];
     }
 }

@@ -23,7 +23,7 @@ class AuthPayloadFactory
      */
     public function user(User $user): array
     {
-        $user->loadMissing('profile.avatarCharacter');
+        $user->loadMissing('profile.avatarCharacter', 'profile.user.languageLevels');
 
         return [
             'id' => $user->id,

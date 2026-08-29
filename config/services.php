@@ -43,7 +43,12 @@ return [
 
     'kalbek' => [
         'frontend_url' => env('KALBEK_FRONTEND_URL', 'http://localhost:3000'),
+        'ai_mode' => env('KALBEK_AI_MODE', 'live'),
         'tts_model' => env('KALBEK_TTS_MODEL', 'gpt-4o-mini-tts'),
+        'tts_pcm_sample_rate' => env('KALBEK_TTS_PCM_SAMPLE_RATE', 24000),
+        'fake_speech_transcript' => env('KALBEK_FAKE_SPEECH_TRANSCRIPT', 'Ar turite maisto?'),
+        'fake_speech_pass' => env('KALBEK_FAKE_SPEECH_PASS', true),
+        'fake_speech_feedback' => env('KALBEK_FAKE_SPEECH_FEEDBACK', 'Dev AI mode: speech accepted without calling an AI provider.'),
     ],
 
 ];

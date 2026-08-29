@@ -40,7 +40,7 @@ class ProfileController extends Controller
 
         $profile->save();
 
-        return ProfileResource::make($profile->load('avatarCharacter'));
+        return ProfileResource::make($profile->load('avatarCharacter', 'user.languageLevels'));
     }
 
     private function profileFor(User $user): Profile
@@ -50,6 +50,7 @@ class ProfileController extends Controller
             ->firstOrCreate(
                 [],
                 ['display_name' => $user->name],
-            );
+            )
+            ->loadMissing('user.languageLevels');
     }
 }

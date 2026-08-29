@@ -95,6 +95,17 @@ make lint           # Check PHP formatting with Pint
 
 The backend now includes the first source-of-truth schema for characters, scenarios, scenes, NPC lines, goals, props, learner profiles, lesson progress, speaking attempts, AI prompts, generated audio, and AI evaluations. `DatabaseSeeder` imports the current restaurant MVP scenario so the API can serve migrated content immediately after seeding. TTS and speech evaluation now run through Laravel AI SDK entry points.
 
+For local development without spending provider tokens, keep AI dev mode enabled:
+
+```sh
+KALBEK_AI_MODE=fake
+KALBEK_FAKE_SPEECH_TRANSCRIPT="Ar turite maisto?"
+KALBEK_FAKE_SPEECH_PASS=true
+KALBEK_FAKE_SPEECH_FEEDBACK="Dev AI mode: speech accepted without calling an AI provider."
+```
+
+In fake mode, `/api/v1/tts` returns generated local WAV audio and `/api/v1/speak-check` returns deterministic feedback without calling OpenAI, OpenRouter, or any other AI provider. Set `KALBEK_AI_MODE=live` when you want the app to use configured AI providers.
+
 For Google sign-in, configure these values in `.env`:
 
 ```sh

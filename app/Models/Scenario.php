@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\CefrLevel;
 use App\ContentStatus;
 use Database\Factories\ScenarioFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'description',
     'emoji',
     'tone',
+    'cefr_level',
     'start_scene_slug',
     'status',
     'sort_order',
@@ -67,6 +69,7 @@ class Scenario extends Model
             'published_at' => 'datetime',
             'sort_order' => 'integer',
             'status' => ContentStatus::class,
+            'cefr_level' => CefrLevel::class,
         ];
     }
 }

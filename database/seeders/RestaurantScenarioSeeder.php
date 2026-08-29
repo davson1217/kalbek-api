@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\ContentStatus;
 use App\Models\Character;
+use App\Models\Goal;
 use App\Models\Scenario;
 use App\Models\Scene;
 use Illuminate\Database\Eloquent\Collection;
@@ -26,6 +27,7 @@ class RestaurantScenarioSeeder extends Seeder
                     'description' => 'You walk into a Lithuanian restaurant. Greet the waitress, get a table, read the menu, order food and drink, and pay the bill — all out loud.',
                     'emoji' => '🍽️',
                     'tone' => 'primary',
+                    'cefr_level' => 'a1',
                     'start_scene_slug' => 'atvykimas',
                     'status' => ContentStatus::Published,
                     'sort_order' => 10,
@@ -51,6 +53,7 @@ class RestaurantScenarioSeeder extends Seeder
                 ],
                 [
                     'setting' => $scene['setting'],
+                    'cefr_level' => $scene['cefr_level'] ?? 'a1',
                     'sort_order' => ($index + 1) * 10,
                 ],
             );
@@ -70,10 +73,37 @@ class RestaurantScenarioSeeder extends Seeder
             $scene->npcLines()->delete();
             $scene->props()->delete();
 
+            foreach ($sceneData['goals'] as $index => $goal) {
+                $scene->goals()->updateOrCreate(
+                    ['slug' => $goal['slug']],
+                    [
+                        'next_scene_id' => $goal['next'] ? $scenes->get($goal['next'])?->id : null,
+                        'label' => $goal['label'],
+                        'intent' => $goal['intent'],
+                        'example' => $goal['example'],
+                        'cefr_level' => $goal['cefr_level'] ?? $sceneData['cefr_level'] ?? 'a1',
+                        'sort_order' => ($index + 1) * 10,
+                    ],
+                );
+            }
+        }
+
+        $goals = Goal::query()
+            ->whereIn('scene_id', $scenes->pluck('id'))
+            ->get()
+            ->keyBy('slug');
+
+        foreach ($this->scenes() as $sceneData) {
+            /** @var Scene $scene */
+            $scene = $scenes->get($sceneData['slug']);
+
             foreach ($sceneData['lines'] as $index => $line) {
                 $scene->npcLines()->create([
+                    'trigger_goal_id' => isset($line['trigger_goal']) ? $goals->get($line['trigger_goal'])?->id : null,
                     'lt' => $line['lt'],
                     'en' => $line['en'],
+                    'cefr_level' => $line['cefr_level'] ?? $sceneData['cefr_level'] ?? 'a1',
+                    'priority' => $line['priority'] ?? 0,
                     'sort_order' => ($index + 1) * 10,
                 ]);
             }
@@ -86,19 +116,6 @@ class RestaurantScenarioSeeder extends Seeder
                     'price' => $prop['price'],
                     'sort_order' => ($index + 1) * 10,
                 ]);
-            }
-
-            foreach ($sceneData['goals'] as $index => $goal) {
-                $scene->goals()->updateOrCreate(
-                    ['slug' => $goal['slug']],
-                    [
-                        'next_scene_id' => $goal['next'] ? $scenes->get($goal['next'])?->id : null,
-                        'label' => $goal['label'],
-                        'intent' => $goal['intent'],
-                        'example' => $goal['example'],
-                        'sort_order' => ($index + 1) * 10,
-                    ],
-                );
             }
         }
     }
@@ -132,9 +149,9 @@ class RestaurantScenarioSeeder extends Seeder
                 'slug' => 'sodinimas',
                 'setting' => 'Rasa picks up two menus and steps out from behind the counter.',
                 'lines' => [
-                    ['lt' => 'Žinoma. Prašau sekite paskui mane — štai staliukas prie lango.', 'en' => 'Of course. Please follow me — here is a table by the window.'],
-                    ['lt' => 'Puiku! Ar norite sėdėti prie lango, ar kampe?', 'en' => 'Great! Would you like to sit by the window or in the corner?'],
-                    ['lt' => 'Turime laisvą staliuką. Prašom sėstis.', 'en' => 'We have a free table. Please have a seat.'],
+                    ['lt' => 'Žinoma. Prašau sekite paskui mane — štai staliukas prie lango.', 'en' => 'Of course. Please follow me — here is a table by the window.', 'trigger_goal' => 'staliukas', 'priority' => 100],
+                    ['lt' => 'Turime laisvą staliuką. Prašom sėstis.', 'en' => 'We have a free table. Please have a seat.', 'trigger_goal' => 'staliukas', 'priority' => 80],
+                    ['lt' => 'Puiku! Ar norite sėdėti prie lango, ar kampe?', 'en' => 'Great! Would you like to sit by the window or in the corner?', 'priority' => 10],
                 ],
                 'goals' => [
                     ['slug' => 'aciu-meniu', 'label' => 'Thank her and ask for the menu', 'intent' => 'Thank her and ask if you could have the menu.', 'example' => 'Ačiū. Ar galėčiau gauti meniu?', 'next' => 'meniu'],

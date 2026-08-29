@@ -27,7 +27,7 @@ class ScenarioPayloadBuilder
 
         return $scenario->loadMissing([
             'character',
-            'scenes.npcLines',
+            'scenes.npcLines.triggerGoal',
             'scenes.goals.nextScene',
             'scenes.props',
         ]);

@@ -23,6 +23,9 @@ class SpeechCheckRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'scenario_id' => ['required', 'string', 'exists:scenarios,slug'],
+            'scene_id' => ['required', 'string', 'exists:scenes,slug'],
+            'goal_id' => ['required', 'string', 'exists:goals,slug'],
             'audio' => ['required', 'file', 'max:8000'],
             'intent' => ['required', 'string', 'max:400'],
             'example' => ['nullable', 'string', 'max:400'],

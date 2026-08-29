@@ -35,6 +35,11 @@ class User extends Authenticatable
         return $this->hasMany(SpeakingAttempt::class);
     }
 
+    public function languageLevels(): HasMany
+    {
+        return $this->hasMany(LearnerLanguageLevel::class);
+    }
+
     /**
      * Get the attributes that should be cast.
      *

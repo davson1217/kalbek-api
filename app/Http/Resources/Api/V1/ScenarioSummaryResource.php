@@ -27,6 +27,7 @@ class ScenarioSummaryResource extends JsonResource
                 'image_path' => $this->character->image_path,
             ]),
             'tone' => $this->tone,
+            'cefr_level' => $this->cefr_level?->value,
             'available' => true,
         ];
     }

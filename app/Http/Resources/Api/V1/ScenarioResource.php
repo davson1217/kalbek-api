@@ -30,14 +30,19 @@ class ScenarioResource extends JsonResource
                 'encourage' => $this->character->encouragement_lines,
             ]),
             'tone' => $this->tone,
+            'cefr_level' => $this->cefr_level?->value,
             'available' => true,
             'start_scene_id' => $this->start_scene_slug,
             'scenes' => $this->whenLoaded('scenes', fn () => $this->scenes->map(fn ($scene): array => [
                 'id' => $scene->slug,
                 'setting' => $scene->setting,
+                'cefr_level' => $scene->cefr_level?->value,
                 'lines' => $scene->npcLines->map(fn ($line): array => [
                     'lt' => $line->lt,
                     'en' => $line->en,
+                    'cefr_level' => $line->cefr_level?->value,
+                    'trigger_goal_id' => $line->triggerGoal?->slug,
+                    'priority' => $line->priority,
                 ])->values(),
                 'props' => $scene->props->map(fn ($prop): array => [
                     'type' => $prop->type,
@@ -51,6 +56,7 @@ class ScenarioResource extends JsonResource
                     'label' => $goal->label,
                     'intent' => $goal->intent,
                     'example' => $goal->example,
+                    'cefr_level' => $goal->cefr_level?->value,
                     'next' => $goal->nextScene?->slug,
                 ])->values(),
             ])->values()),

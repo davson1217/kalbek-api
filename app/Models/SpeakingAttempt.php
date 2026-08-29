@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\CefrLevel;
 use App\SpeakingAttemptStatus;
 use Database\Factories\SpeakingAttemptFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,9 +21,19 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'transcript',
     'passed',
     'score',
+    'grammar_score',
+    'vocabulary_score',
+    'cohesion_score',
+    'task_completion_score',
+    'pronunciation_score',
+    'overall_score',
+    'attempt_cefr_level',
+    'evaluation_provider',
+    'evaluation_model',
     'feedback',
     'corrected_text',
     'metadata',
+    'evaluated_at',
     'graded_at',
 ])]
 class SpeakingAttempt extends Model
@@ -61,7 +72,15 @@ class SpeakingAttempt extends Model
             'status' => SpeakingAttemptStatus::class,
             'passed' => 'boolean',
             'score' => 'integer',
+            'grammar_score' => 'integer',
+            'vocabulary_score' => 'integer',
+            'cohesion_score' => 'integer',
+            'task_completion_score' => 'integer',
+            'pronunciation_score' => 'integer',
+            'overall_score' => 'integer',
+            'attempt_cefr_level' => CefrLevel::class,
             'metadata' => 'array',
+            'evaluated_at' => 'datetime',
             'graded_at' => 'datetime',
         ];
     }

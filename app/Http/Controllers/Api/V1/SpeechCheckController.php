@@ -2,22 +2,81 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Contracts\SpeechEvaluatorContract;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SpeechCheckRequest;
-use App\Services\Ai\SpeechEvaluator;
+use App\Models\Goal;
+use App\Models\Scenario;
+use App\Models\SpeakingAttempt;
+use App\Models\User;
+use App\SpeakingAttemptStatus;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Validation\ValidationException;
 
 class SpeechCheckController extends Controller
 {
-    public function __invoke(SpeechCheckRequest $request, SpeechEvaluator $evaluator): JsonResponse
+    public function __invoke(SpeechCheckRequest $request, SpeechEvaluatorContract $evaluator): JsonResponse
     {
         $data = $request->validated();
+        /** @var User $user */
+        $user = $request->user();
+        $scenario = Scenario::query()->where('slug', $data['scenario_id'])->firstOrFail();
+        $scene = $scenario->scenes()->where('slug', $data['scene_id'])->first();
 
-        return response()->json($evaluator->evaluate(
+        if (! $scene) {
+            throw ValidationException::withMessages([
+                'scene_id' => 'The selected scene does not belong to the selected scenario.',
+            ]);
+        }
+
+        $goal = Goal::query()
+            ->where('scene_id', $scene->id)
+            ->where('slug', $data['goal_id'])
+            ->first();
+
+        if (! $goal) {
+            throw ValidationException::withMessages([
+                'goal_id' => 'The selected goal does not belong to the selected scene.',
+            ]);
+        }
+
+        $result = $evaluator->evaluate(
             $data['audio'],
             $data['intent'],
             $data['example'] ?? '',
             $data['context'] ?? '',
-        ));
+        );
+
+        SpeakingAttempt::query()->create([
+            'user_id' => $user->id,
+            'scenario_id' => $scenario->id,
+            'scene_id' => $scene->id,
+            'goal_id' => $goal->id,
+            'status' => SpeakingAttemptStatus::Graded,
+            'transcript' => $result['transcript'],
+            'passed' => $result['pass'],
+            'score' => $result['overall_score'],
+            'grammar_score' => $result['scores']['grammar'],
+            'vocabulary_score' => $result['scores']['vocabulary'],
+            'cohesion_score' => $result['scores']['cohesion'],
+            'task_completion_score' => $result['scores']['task_completion'],
+            'pronunciation_score' => $result['scores']['pronunciation'],
+            'overall_score' => $result['overall_score'],
+            'attempt_cefr_level' => $result['attempt_cefr_level'],
+            'evaluation_provider' => $result['evaluation_provider'],
+            'evaluation_model' => $result['evaluation_model'],
+            'feedback' => $result['feedback'],
+            'corrected_text' => $result['corrected'],
+            'metadata' => [
+                'intent' => $data['intent'],
+                'example' => $data['example'] ?? '',
+                'context' => $data['context'] ?? '',
+                'content_cefr_level' => $goal->cefr_level?->value ?? $scene->cefr_level?->value ?? $scenario->cefr_level?->value,
+            ],
+            'evaluated_at' => now(),
+            'graded_at' => now(),
+        ]);
+
+        return response()->json($result);
     }
 }
