@@ -1,0 +1,72 @@
+<?php
+
+namespace App\Models;
+
+use App\ContentStatus;
+use Database\Factories\ScenarioFactory;
+use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+#[Fillable([
+    'character_id',
+    'slug',
+    'title',
+    'subtitle',
+    'description',
+    'emoji',
+    'tone',
+    'start_scene_slug',
+    'status',
+    'sort_order',
+    'published_at',
+])]
+class Scenario extends Model
+{
+    /** @use HasFactory<ScenarioFactory> */
+    use HasFactory;
+
+    public function character(): BelongsTo
+    {
+        return $this->belongsTo(Character::class);
+    }
+
+    public function scenes(): HasMany
+    {
+        return $this->hasMany(Scene::class)->orderBy('sort_order');
+    }
+
+    public function lessonProgress(): HasMany
+    {
+        return $this->hasMany(LessonProgress::class);
+    }
+
+    public function speakingAttempts(): HasMany
+    {
+        return $this->hasMany(SpeakingAttempt::class);
+    }
+
+    public function getRouteKeyName(): string
+    {
+        return 'slug';
+    }
+
+    #[Scope]
+    protected function published(Builder $query): Builder
+    {
+        return $query->where('status', ContentStatus::Published->value);
+    }
+
+    protected function casts(): array
+    {
+        return [
+            'published_at' => 'datetime',
+            'sort_order' => 'integer',
+            'status' => ContentStatus::class,
+        ];
+    }
+}

@@ -35,4 +35,15 @@ return [
         ],
     ],
 
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
+    'kalbek' => [
+        'frontend_url' => env('KALBEK_FRONTEND_URL', 'http://localhost:3000'),
+        'tts_model' => env('KALBEK_TTS_MODEL', 'gpt-4o-mini-tts'),
+    ],
+
 ];

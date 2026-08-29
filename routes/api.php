@@ -1,5 +1,13 @@
 <?php
 
+use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\LessonCompletionController;
+use App\Http\Controllers\Api\V1\LessonProgressController;
+use App\Http\Controllers\Api\V1\OAuthExchangeController;
+use App\Http\Controllers\Api\V1\ProfileController;
+use App\Http\Controllers\Api\V1\ScenarioController;
+use App\Http\Controllers\Api\V1\SpeechCheckController;
+use App\Http\Controllers\Api\V1\TextToSpeechController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -11,4 +19,33 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     Route::middleware('auth:sanctum')->get('/user', fn (Request $request) => $request->user())
         ->name('user');
+
+    Route::post('/auth/register', [AuthController::class, 'register'])
+        ->name('auth.register');
+    Route::post('/auth/login', [AuthController::class, 'login'])
+        ->name('auth.login');
+    Route::post('/auth/oauth/exchange', OAuthExchangeController::class)
+        ->name('auth.oauth.exchange');
+
+    Route::apiResource('scenarios', ScenarioController::class)
+        ->only(['index', 'show']);
+    Route::get('/tts', TextToSpeechController::class)
+        ->name('tts');
+
+    Route::middleware('auth:sanctum')->group(function (): void {
+        Route::get('/auth/user', [AuthController::class, 'me'])
+            ->name('auth.user');
+        Route::post('/auth/logout', [AuthController::class, 'logout'])
+            ->name('auth.logout');
+        Route::get('/profile', [ProfileController::class, 'show'])
+            ->name('profile.show');
+        Route::patch('/profile', [ProfileController::class, 'update'])
+            ->name('profile.update');
+        Route::get('/lesson-progress', [LessonProgressController::class, 'index'])
+            ->name('lesson-progress.index');
+        Route::post('/lessons/{scenario}/complete', LessonCompletionController::class)
+            ->name('lessons.complete');
+        Route::post('/speak-check', SpeechCheckController::class)
+            ->name('speak-check');
+    });
 });

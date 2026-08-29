@@ -75,8 +75,35 @@ make lint           # Check PHP formatting with Pint
 - `GET /` redirects to `/cms`
 - `GET /cms` renders the CMS dashboard
 - `GET /api/v1/health` returns service health
-- `GET /api/v1/user` returns the authenticated Sanctum user
+- `POST /api/v1/auth/register` creates a learner account, profile, and API token
+- `POST /api/v1/auth/login` returns a learner API token
+- `GET /auth/google/redirect` starts Laravel-owned Google OAuth
+- `GET /auth/google/callback` handles the Google OAuth callback and redirects to the frontend
+- `POST /api/v1/auth/oauth/exchange` exchanges the frontend callback code for a learner API token
+- `GET /api/v1/auth/user` returns the authenticated learner and profile
+- `POST /api/v1/auth/logout` revokes the current learner token
+- `GET /api/v1/profile` returns learner profile, XP, hearts, streak, and avatar
+- `PATCH /api/v1/profile` updates profile display name and avatar character
+- `GET /api/v1/lesson-progress` lists authenticated learner progress
+- `GET /api/v1/scenarios` lists published scenarios for the learner app
+- `GET /api/v1/scenarios/{scenario}` returns the full published scene graph
+- `POST /api/v1/lessons/{scenario}/complete` records completion, XP, attempts, best score, and streak progress
+- `GET /api/v1/tts?text=...` returns cached/generated Lithuanian audio
+- `POST /api/v1/speak-check` transcribes and evaluates an authenticated learner recording
 
 ## Notes
 
-The CMS is intentionally minimal at this stage. The next phase should introduce the domain schema for scenarios, scenes, goals, characters, translations, publishing state, and AI prompt/agent configuration.
+The backend now includes the first source-of-truth schema for characters, scenarios, scenes, NPC lines, goals, props, learner profiles, lesson progress, speaking attempts, AI prompts, generated audio, and AI evaluations. `DatabaseSeeder` imports the current restaurant MVP scenario so the API can serve migrated content immediately after seeding. TTS and speech evaluation now run through Laravel AI SDK entry points.
+
+For Google sign-in, configure these values in `.env`:
+
+```sh
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI="${APP_URL}/auth/google/callback"
+KALBEK_FRONTEND_URL=http://localhost:3000
+```
+
+The Google Cloud OAuth redirect URI must match `GOOGLE_REDIRECT_URI`.
+
+The CMS is intentionally minimal at this stage. The next phase should build the Inertia React CMS resources around the new schema.

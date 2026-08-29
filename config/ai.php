@@ -13,12 +13,12 @@ return [
     |
     */
 
-    'default' => 'openai',
-    'default_for_images' => 'gemini',
-    'default_for_audio' => 'openai',
-    'default_for_transcription' => 'openai',
-    'default_for_embeddings' => 'openai',
-    'default_for_reranking' => 'cohere',
+    'default' => env('KALBEK_AI_DEFAULT', 'openrouter'),
+    'default_for_images' => env('KALBEK_AI_FOR_IMAGES', 'gemini'),
+    'default_for_audio' => env('KALBEK_AI_FOR_AUDIO', 'openrouter'),
+    'default_for_transcription' => env('KALBEK_AI_FOR_TRANSCRIPTION', 'openrouter'),
+    'default_for_embeddings' => env('KALBEK_AI_FOR_EMBEDDINGS', 'openai'),
+    'default_for_reranking' => env('KALBEK_AI_FOR_RERANKING', 'cohere'),
 
     /*
     |--------------------------------------------------------------------------
