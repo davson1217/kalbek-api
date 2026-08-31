@@ -8,6 +8,7 @@ use Laravel\Ai\Contracts\HasStructuredOutput;
 use Laravel\Ai\Promptable;
 use Stringable;
 
+/* Currently unused */
 class DialogueRouter implements Agent, HasStructuredOutput
 {
     use Promptable;
