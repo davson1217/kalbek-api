@@ -85,6 +85,11 @@ class AiSpeechApiTest extends TestCase
             'pass' => true,
             'feedback' => 'That works well.',
             'corrected' => 'Norėčiau staliuko dviem.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => true,
+            'communication_note' => 'You answered the goal and added a natural detail.',
+            'improvement_focus' => 'grammar',
             'scores' => [
                 'grammar' => 82,
                 'vocabulary' => 78,
@@ -113,6 +118,11 @@ class AiSpeechApiTest extends TestCase
             ->assertJsonPath('feedback', 'That works well.')
             ->assertJsonPath('corrected', 'Norėčiau staliuko dviem.')
             ->assertJsonPath('suggestion', 'Norėčiau staliuko dviem, prašau.')
+            ->assertJsonPath('communication.intent_match', 'full')
+            ->assertJsonPath('communication.understood_meaning', true)
+            ->assertJsonPath('communication.went_off_script', true)
+            ->assertJsonPath('communication.note', 'You answered the goal and added a natural detail.')
+            ->assertJsonPath('communication.improvement_focus', 'grammar')
             ->assertJsonPath('scores.grammar', 82)
             ->assertJsonPath('overall_score', 81)
             ->assertJsonPath('attempt_cefr_level', 'a1');
@@ -126,6 +136,8 @@ class AiSpeechApiTest extends TestCase
             'task_completion_score' => 90,
             'overall_score' => 81,
             'attempt_cefr_level' => 'a1',
+            'metadata->communication->intent_match' => 'full',
+            'metadata->communication->went_off_script' => true,
         ]);
 
         Transcription::assertGenerated(fn ($prompt): bool => $prompt->language === 'lt');
@@ -163,6 +175,9 @@ class AiSpeechApiTest extends TestCase
             ->assertJsonPath('pass', true)
             ->assertJsonPath('corrected', 'Ar turite maisto?')
             ->assertJsonPath('suggestion', 'Ar turite maisto?')
+            ->assertJsonPath('communication.intent_match', 'full')
+            ->assertJsonPath('communication.note', 'The spoken answer satisfies the current goal.')
+            ->assertJsonPath('communication.improvement_focus', 'none')
             ->assertJsonPath('scores.grammar', 78)
             ->assertJsonPath('overall_score', 79)
             ->assertJsonPath('attempt_cefr_level', 'a1');
@@ -187,6 +202,11 @@ class AiSpeechApiTest extends TestCase
             'pass' => true,
             'feedback' => 'That works well.',
             'corrected' => 'Kavos, prašau.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'You answered the goal clearly.',
+            'improvement_focus' => 'none',
             'scores' => [
                 'grammar' => 88,
                 'vocabulary' => 86,
@@ -223,6 +243,11 @@ class AiSpeechApiTest extends TestCase
             'pass' => true,
             'feedback' => 'Great effort, just watch the spelling and capitalize the name.',
             'corrected' => 'Laba diena, mano vardas Deivydas.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'The speech worked, but the spelling in the transcript is rough.',
+            'improvement_focus' => 'grammar',
             'scores' => [
                 'grammar' => 80,
                 'vocabulary' => 80,
@@ -247,12 +272,49 @@ class AiSpeechApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('transcript', 'Labadiena, mano vardas devydas.')
-            ->assertJsonPath('feedback', 'That was understandable. A more natural spoken version is: Laba diena, mano vardas Deivydas.');
+            ->assertJsonPath('feedback', 'That was understandable. A more natural spoken version is: Laba diena, mano vardas Deivydas.')
+            ->assertJsonPath('communication.note', 'That was understandable. Try saying the phrase a little more clearly and naturally.');
 
         SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
             ->contains('Raw speech transcript: "Labadiena, mano vardas devydas."')
             && $prompt->contains('Normalized transcript for judging: "Laba diena, mano vardas devydas."')
             && $prompt->contains('Judge the spoken answer, not the transcript formatting.'));
+    }
+
+    public function test_speech_check_defaults_missing_communication_metadata_for_older_judge_payloads(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Aš esu David.']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'feedback' => 'That works well.',
+            'corrected' => 'Aš esu David.',
+            'scores' => [
+                'grammar' => 80,
+                'vocabulary' => 80,
+                'cohesion' => 80,
+                'task_completion' => 85,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, A1ScenarioSeeder::class]);
+
+        $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'prisistatymas',
+            'scene_id' => 'pasisveikinimas',
+            'goal_id' => 'intro-name',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner says their name.',
+            'example' => 'Aš esu David.',
+            'context' => 'Introducing yourself.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('communication.intent_match', 'full')
+            ->assertJsonPath('communication.understood_meaning', true)
+            ->assertJsonPath('communication.went_off_script', false)
+            ->assertJsonPath('communication.note', 'You answered the goal clearly.')
+            ->assertJsonPath('communication.improvement_focus', 'none');
     }
 
     public function test_speech_check_keeps_authored_progression_even_when_utterance_mentions_later_intent(): void

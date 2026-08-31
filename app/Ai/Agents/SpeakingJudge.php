@@ -31,7 +31,11 @@ class SpeakingJudge implements Agent, HasStructuredOutput
             .'Use null for pronunciation unless audio-level evidence is explicitly available. '
             .'Estimate the attempt CEFR level as pre_a1, a1, a2, b1, b2, c1, or c2. '
             .'Feedback must be one short friendly English sentence about spoken meaning, pronunciation, grammar, vocabulary, or natural phrasing. '
-            ."Corrected must be a natural spoken Lithuanian version of the learner's answer.";
+            ."Corrected must be a natural spoken Lithuanian version of the learner's answer. "
+            .'Set intent_match to full when the goal is clearly answered, partial when the answer is related but incomplete, and off_topic when it misses the goal. '
+            .'Set went_off_script to true when the learner adds extra information or answers in an unexpected but still conversationally acceptable way. '
+            .'Use communication_note to explain the communicative result in one short English sentence. '
+            .'Use improvement_focus for the single most useful next focus area.';
     }
 
     /**
@@ -43,6 +47,11 @@ class SpeakingJudge implements Agent, HasStructuredOutput
             'pass' => $schema->boolean()->required(),
             'feedback' => $schema->string()->required(),
             'corrected' => $schema->string()->required(),
+            'intent_match' => $schema->string()->enum(['full', 'partial', 'off_topic'])->required(),
+            'understood_meaning' => $schema->boolean()->required(),
+            'went_off_script' => $schema->boolean()->required(),
+            'communication_note' => $schema->string()->required(),
+            'improvement_focus' => $schema->string()->enum(['grammar', 'vocabulary', 'pronunciation', 'coherence', 'task', 'none'])->required(),
             'scores' => $schema->object([
                 'grammar' => $schema->integer()->min(0)->max(100)->required(),
                 'vocabulary' => $schema->integer()->min(0)->max(100)->required(),

@@ -12,7 +12,7 @@ use Laravel\Ai\Transcription;
 class SpeechEvaluator implements SpeechEvaluatorContract
 {
     /**
-     * @return array{transcript: string, pass: bool, feedback: string, corrected: string, suggestion: string, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
+     * @return array{transcript: string, pass: bool, feedback: string, corrected: string, suggestion: string, communication: array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
      */
     public function evaluate(UploadedFile $audio, string $intent, string $example = '', string $context = '', bool $strict = false): array
     {
@@ -28,6 +28,13 @@ class SpeechEvaluator implements SpeechEvaluatorContract
                 'feedback' => 'I could not hear anything, try speaking a little louder.',
                 'corrected' => '',
                 'suggestion' => $example,
+                'communication' => [
+                    'intent_match' => 'off_topic',
+                    'understood_meaning' => false,
+                    'went_off_script' => false,
+                    'note' => 'I could not understand the spoken answer yet.',
+                    'improvement_focus' => 'pronunciation',
+                ],
                 'scores' => [
                     'grammar' => 0,
                     'vocabulary' => 0,
@@ -64,6 +71,7 @@ class SpeechEvaluator implements SpeechEvaluatorContract
             'feedback' => $this->speechFirstFeedback((string) ($verdict['feedback'] ?? 'Try that again.'), $example),
             'corrected' => (string) ($verdict['corrected'] ?? ''),
             'suggestion' => $example,
+            'communication' => $this->communicationFromVerdict($verdict, (bool) ($verdict['pass'] ?? false)),
             'scores' => $scores,
             'overall_score' => $overallScore,
             'attempt_cefr_level' => (string) ($verdict['attempt_cefr_level'] ?? CefrLevel::estimateFromScore($overallScore)->value),
@@ -91,6 +99,23 @@ class SpeechEvaluator implements SpeechEvaluatorContract
             'cohesion' => $this->score($scores['cohesion'] ?? null),
             'task_completion' => $this->score($scores['task_completion'] ?? null),
             'pronunciation' => isset($scores['pronunciation']) ? $this->score($scores['pronunciation']) : null,
+        ];
+    }
+
+    /**
+     * @return array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}
+     */
+    private function communicationFromVerdict(array $verdict, bool $passed): array
+    {
+        $intentMatch = (string) ($verdict['intent_match'] ?? ($passed ? 'full' : 'partial'));
+        $focus = (string) ($verdict['improvement_focus'] ?? ($passed ? 'none' : 'task'));
+
+        return [
+            'intent_match' => in_array($intentMatch, ['full', 'partial', 'off_topic'], true) ? $intentMatch : ($passed ? 'full' : 'partial'),
+            'understood_meaning' => (bool) ($verdict['understood_meaning'] ?? $passed),
+            'went_off_script' => (bool) ($verdict['went_off_script'] ?? false),
+            'note' => $this->speechFirstFeedback((string) ($verdict['communication_note'] ?? ($passed ? 'You answered the goal clearly.' : 'Your answer was related, but did not fully answer the goal.')), ''),
+            'improvement_focus' => in_array($focus, ['grammar', 'vocabulary', 'pronunciation', 'coherence', 'task', 'none'], true) ? $focus : ($passed ? 'none' : 'task'),
         ];
     }
 

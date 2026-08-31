@@ -78,6 +78,7 @@ class SpeechCheckController extends Controller
                 'context' => $data['context'] ?? '',
                 'strict_speech_mode' => (bool) $user->strict_speech_mode,
                 'content_cefr_level' => $goal->cefr_level?->value ?? $scene->cefr_level?->value ?? $scenario->cefr_level?->value,
+                'communication' => $result['communication'],
                 'dialogue' => $dialogue,
             ],
             'evaluated_at' => now(),
