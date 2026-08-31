@@ -1,74 +1,81 @@
-import { Head } from '@inertiajs/react';
-import { Bot, Database, Gauge, LibraryBig } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { BookOpen, MessageSquareText, Mic, Target, UsersRound } from 'lucide-react';
 
-const cards = [
-    {
-        title: 'Content model',
-        description: 'Scenarios, scenes, characters, goals, and localized copy will live here.',
-        icon: LibraryBig,
-    },
-    {
-        title: 'AI agents',
-        description: 'Laravel AI SDK will orchestrate transcription, grading, hints, and TTS.',
-        icon: Bot,
-    },
-    {
-        title: 'Operational data',
-        description: 'MySQL owns users, progress, attempts, and publishing workflow state.',
-        icon: Database,
-    },
-    {
-        title: 'Fast delivery',
-        description: 'Redis backs cache, queues, rate limits, and frequently served published content.',
-        icon: Gauge,
-    },
-];
+import { CmsLayout } from '../Layouts/CmsLayout';
+import type { ScenarioSummary } from '../types';
 
-export default function Dashboard() {
+interface Props {
+    stats: {
+        scenarios: number;
+        characters: number;
+        goals: number;
+        npcLines: number;
+        speakingAttempts: number;
+    };
+    recentScenarios: ScenarioSummary[];
+}
+
+export default function Dashboard({ stats, recentScenarios }: Props) {
+    const cards = [
+        { label: 'Scenarios', value: stats.scenarios, icon: BookOpen },
+        { label: 'Characters', value: stats.characters, icon: UsersRound },
+        { label: 'Goals', value: stats.goals, icon: Target },
+        { label: 'Character replies', value: stats.npcLines, icon: MessageSquareText },
+        { label: 'Speaking attempts', value: stats.speakingAttempts, icon: Mic },
+    ];
+
     return (
-        <>
+        <CmsLayout>
             <Head title="CMS Dashboard" />
-            <main className="min-h-screen bg-slate-50 text-slate-950">
-                <section className="mx-auto w-full max-w-6xl px-6 py-10">
-                    <div className="flex flex-col gap-2 border-b border-slate-200 pb-6">
-                        <p className="text-sm font-semibold uppercase tracking-wide text-blue-700">
-                            Kalbek CMS
-                        </p>
-                        <h1 className="text-3xl font-semibold tracking-tight">
-                            Content and AI operations
-                        </h1>
-                        <p className="max-w-2xl text-sm leading-6 text-slate-600">
-                            This Inertia React surface will manage the backend source of truth for
-                            learner-facing scenarios, characters, AI prompts, and publishing state.
-                        </p>
-                    </div>
+            <div className="flex flex-col gap-2">
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                    Dashboard
+                </p>
+                <h1 className="text-3xl font-semibold tracking-tight">Content operations</h1>
+                <p className="max-w-3xl text-sm leading-6 text-slate-600">
+                    Manage teacher-authored Lithuanian scenarios, dialogue, CEFR metadata, and
+                    publishing state from Laravel, the app source of truth.
+                </p>
+            </div>
 
-                    <div className="mt-8 grid gap-4 md:grid-cols-2">
-                        {cards.map((card) => {
-                            const Icon = card.icon;
+            <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                {cards.map((card) => {
+                    const Icon = card.icon;
 
-                            return (
-                                <article
-                                    key={card.title}
-                                    className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-blue-50 text-blue-700">
-                                            <Icon className="size-5" />
-                                        </span>
-                                        <div>
-                                            <h2 className="font-semibold">{card.title}</h2>
-                                            <p className="mt-1 text-sm leading-6 text-slate-600">
-                                                {card.description}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </article>
-                            );
-                        })}
-                    </div>
-                </section>
-            </main>
-        </>
+                    return (
+                        <article key={card.label} className="rounded-lg border border-slate-200 bg-white p-4">
+                            <Icon className="size-5 text-slate-500" />
+                            <p className="mt-3 text-2xl font-semibold">{card.value}</p>
+                            <p className="text-sm text-slate-500">{card.label}</p>
+                        </article>
+                    );
+                })}
+            </div>
+
+            <section className="mt-8 rounded-lg border border-slate-200 bg-white">
+                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                    <h2 className="font-semibold">Recent scenarios</h2>
+                    <Link href="/cms/scenarios" className="text-sm font-medium text-blue-700">
+                        View all
+                    </Link>
+                </div>
+                <div className="divide-y divide-slate-100">
+                    {recentScenarios.map((scenario) => (
+                        <Link
+                            key={scenario.id}
+                            href={`/cms/scenarios/${scenario.slug}`}
+                            className="grid gap-2 px-4 py-3 text-sm hover:bg-slate-50 md:grid-cols-[1fr_120px_120px]"
+                        >
+                            <span>
+                                <span className="font-medium">{scenario.title}</span>
+                                <span className="ml-2 text-slate-500">{scenario.character}</span>
+                            </span>
+                            <span className="text-slate-600">{scenario.cefr_level ?? 'unleveled'}</span>
+                            <span className="text-slate-600">{scenario.status}</span>
+                        </Link>
+                    ))}
+                </div>
+            </section>
+        </CmsLayout>
     );
 }

@@ -1,19 +1,40 @@
 import '../css/app.css';
 
 import { createInertiaApp } from '@inertiajs/react';
-import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import { createRoot } from 'react-dom/client';
+import type { ComponentType } from 'react';
+
+import Login from './Pages/Auth/Login';
+import CharactersIndex from './Pages/Characters/Index';
+import Dashboard from './Pages/Dashboard';
+import ScenariosIndex from './Pages/Scenarios/Index';
+import ScenariosShow from './Pages/Scenarios/Show';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Kalbek API';
+const pages: Record<string, ComponentType<any>> = {
+    'Auth/Login': Login,
+    'Characters/Index': CharactersIndex,
+    Dashboard,
+    'Scenarios/Index': ScenariosIndex,
+    'Scenarios/Show': ScenariosShow,
+};
 
 createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name) =>
-        resolvePageComponent(
-            `./Pages/${name}.tsx`,
-            import.meta.glob('./Pages/**/*.tsx'),
-        ),
+    resolve: (name) => {
+        const page = pages[name];
+
+        if (!page) {
+            throw new Error(`Page not found: ${name}`);
+        }
+
+        return page;
+    },
     setup({ el, App, props }) {
+        if (!el) {
+            throw new Error('Inertia root element was not found.');
+        }
+
         createRoot(el).render(<App {...props} />);
     },
     progress: {

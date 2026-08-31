@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Contracts\DialogueOrchestratorContract;
 use App\Contracts\SpeechEvaluatorContract;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SpeechCheckRequest;
@@ -15,7 +16,7 @@ use Illuminate\Validation\ValidationException;
 
 class SpeechCheckController extends Controller
 {
-    public function __invoke(SpeechCheckRequest $request, SpeechEvaluatorContract $evaluator): JsonResponse
+    public function __invoke(SpeechCheckRequest $request, SpeechEvaluatorContract $evaluator, DialogueOrchestratorContract $orchestrator): JsonResponse
     {
         $data = $request->validated();
         /** @var User $user */
@@ -45,7 +46,11 @@ class SpeechCheckController extends Controller
             $data['intent'],
             $data['example'] ?? '',
             $data['context'] ?? '',
+            (bool) $user->strict_speech_mode,
         );
+
+        $scenario->loadMissing(['scenes.goals.nextScene', 'scenes.npcLines.triggerGoal']);
+        $dialogue = $orchestrator->decide($scenario, $scene, $goal, $result['transcript'], $result['pass']);
 
         SpeakingAttempt::query()->create([
             'user_id' => $user->id,
@@ -71,12 +76,14 @@ class SpeechCheckController extends Controller
                 'intent' => $data['intent'],
                 'example' => $data['example'] ?? '',
                 'context' => $data['context'] ?? '',
+                'strict_speech_mode' => (bool) $user->strict_speech_mode,
                 'content_cefr_level' => $goal->cefr_level?->value ?? $scene->cefr_level?->value ?? $scenario->cefr_level?->value,
+                'dialogue' => $dialogue,
             ],
             'evaluated_at' => now(),
             'graded_at' => now(),
         ]);
 
-        return response()->json($result);
+        return response()->json([...$result, 'dialogue' => $dialogue]);
     }
 }

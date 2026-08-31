@@ -31,6 +31,7 @@ class ProfileApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.display_name', 'Ada')
             ->assertJsonPath('data.avatar_character.id', 'gabija')
+            ->assertJsonPath('data.strict_speech_mode', false)
             ->assertJsonPath('data.language_level.current_cefr_level', 'pre_a1')
             ->assertJsonPath('data.language_level.confidence_score', 0)
             ->assertJsonPath('data.language_level.evidence_attempts_count', 0);
@@ -84,16 +85,22 @@ class ProfileApiTest extends TestCase
         $response = $this->patchJson('/api/v1/profile', [
             'display_name' => 'Adele',
             'avatar_character' => 'rasa',
+            'strict_speech_mode' => true,
         ]);
 
         $response
             ->assertOk()
             ->assertJsonPath('data.display_name', 'Adele')
-            ->assertJsonPath('data.avatar_character.id', 'rasa');
+            ->assertJsonPath('data.avatar_character.id', 'rasa')
+            ->assertJsonPath('data.strict_speech_mode', true);
 
         $this->assertDatabaseHas('profiles', [
             'user_id' => $user->id,
             'display_name' => 'Adele',
+        ]);
+        $this->assertDatabaseHas('users', [
+            'id' => $user->id,
+            'strict_speech_mode' => true,
         ]);
     }
 

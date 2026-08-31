@@ -24,36 +24,35 @@ class RestaurantScenarioSeeder extends Seeder
                     'character_id' => $character->id,
                     'title' => 'Restorane',
                     'subtitle' => 'At the restaurant',
-                    'description' => 'You walk into a Lithuanian restaurant. Greet the waitress, get a table, read the menu, order food and drink, and pay the bill — all out loud.',
+                    'description' => 'Greet the waitress, ask for a table, order simple food and drink, and pay.',
                     'emoji' => '🍽️',
                     'tone' => 'primary',
                     'cefr_level' => 'a1',
                     'start_scene_slug' => 'atvykimas',
                     'status' => ContentStatus::Published,
-                    'sort_order' => 10,
+                    'sort_order' => 40,
                     'published_at' => now(),
                 ],
             );
+
+            $scenario->scenes()
+                ->whereNotIn('slug', collect($this->scenes())->pluck('slug')->all())
+                ->delete();
 
             $scenes = $this->upsertScenes($scenario);
             $this->replaceSceneContent($scenes);
         });
     }
 
-    /**
-     * @return Collection<string, Scene>
-     */
+    /** @return Collection<string, Scene> */
     private function upsertScenes(Scenario $scenario): Collection
     {
         foreach ($this->scenes() as $index => $scene) {
-            Scene::query()->updateOrCreate(
-                [
-                    'scenario_id' => $scenario->id,
-                    'slug' => $scene['slug'],
-                ],
+            $scenario->scenes()->updateOrCreate(
+                ['slug' => $scene['slug']],
                 [
                     'setting' => $scene['setting'],
-                    'cefr_level' => $scene['cefr_level'] ?? 'a1',
+                    'cefr_level' => 'a1',
                     'sort_order' => ($index + 1) * 10,
                 ],
             );
@@ -62,9 +61,7 @@ class RestaurantScenarioSeeder extends Seeder
         return $scenario->scenes()->get()->keyBy('slug');
     }
 
-    /**
-     * @param  Collection<string, Scene>  $scenes
-     */
+    /** @param Collection<string, Scene> $scenes */
     private function replaceSceneContent(Collection $scenes): void
     {
         foreach ($this->scenes() as $sceneData) {
@@ -81,11 +78,15 @@ class RestaurantScenarioSeeder extends Seeder
                         'label' => $goal['label'],
                         'intent' => $goal['intent'],
                         'example' => $goal['example'],
-                        'cefr_level' => $goal['cefr_level'] ?? $sceneData['cefr_level'] ?? 'a1',
+                        'cefr_level' => 'a1',
                         'sort_order' => ($index + 1) * 10,
                     ],
                 );
             }
+
+            $scene->goals()
+                ->whereNotIn('slug', collect($sceneData['goals'])->pluck('slug')->all())
+                ->delete();
         }
 
         $goals = Goal::query()
@@ -102,7 +103,7 @@ class RestaurantScenarioSeeder extends Seeder
                     'trigger_goal_id' => isset($line['trigger_goal']) ? $goals->get($line['trigger_goal'])?->id : null,
                     'lt' => $line['lt'],
                     'en' => $line['en'],
-                    'cefr_level' => $line['cefr_level'] ?? $sceneData['cefr_level'] ?? 'a1',
+                    'cefr_level' => 'a1',
                     'priority' => $line['priority'] ?? 0,
                     'sort_order' => ($index + 1) * 10,
                 ]);
@@ -123,138 +124,104 @@ class RestaurantScenarioSeeder extends Seeder
     private function scenes(): array
     {
         $menu = [
-            ['lt' => 'Šaltibarščiai', 'en' => 'Cold beetroot soup', 'price' => '4,50 €'],
-            ['lt' => 'Cepelinai su mėsa', 'en' => 'Potato dumplings with meat', 'price' => '9,90 €'],
-            ['lt' => 'Kepta duona su sūriu', 'en' => 'Fried bread with cheese', 'price' => '5,20 €'],
-            ['lt' => 'Bulviniai blynai', 'en' => 'Potato pancakes', 'price' => '7,40 €'],
-            ['lt' => 'Vištienos kepsnys', 'en' => 'Grilled chicken', 'price' => '11,50 €'],
-            ['lt' => 'Šakotis', 'en' => 'Tree cake (dessert)', 'price' => '3,80 €'],
+            ['lt' => 'Sriuba', 'en' => 'Soup', 'price' => '4,00 €'],
+            ['lt' => 'Salotos', 'en' => 'Salad', 'price' => '5,00 €'],
+            ['lt' => 'Vištiena', 'en' => 'Chicken', 'price' => '8,00 €'],
+            ['lt' => 'Vanduo', 'en' => 'Water', 'price' => '1,50 €'],
+            ['lt' => 'Arbata', 'en' => 'Tea', 'price' => '2,00 €'],
         ];
 
         return [
             [
                 'slug' => 'atvykimas',
-                'setting' => 'You push open the door. Rasa, the waitress, looks up.',
+                'setting' => 'The learner enters a small restaurant. Rasa greets them at the door.',
                 'lines' => [
-                    ['lt' => 'Laba diena! Sveiki atvykę į mūsų restoraną.', 'en' => 'Good day! Welcome to our restaurant.'],
-                    ['lt' => 'Sveiki! Kuo galiu jums padėti?', 'en' => 'Hello! How can I help you?'],
-                    ['lt' => 'Labas vakaras! Malonu jus matyti. Ar turite rezervaciją?', 'en' => 'Good evening! Nice to see you. Do you have a reservation?'],
+                    ['lt' => 'Laba diena! Kuo galiu jums padėti?', 'en' => 'Good day! How can I help you?'],
+                    ['lt' => 'Sveiki atvykę. Ar norite staliuko?', 'en' => 'Welcome. Would you like a table?'],
+                    ['lt' => 'Žinoma. Turime laisvą staliuką.', 'en' => 'Of course. We have a free table.', 'trigger_goal' => 'ask-table', 'priority' => 100],
+                    ['lt' => 'Taip, prašom. Staliukas yra laisvas.', 'en' => 'Yes, please. A table is free.', 'trigger_goal' => 'ask-table', 'priority' => 100],
+                    ['lt' => 'Gerai, staliukas dviem.', 'en' => 'Alright, a table for two.', 'trigger_goal' => 'ask-table-two', 'priority' => 100],
+                    ['lt' => 'Žinoma, turime staliuką dviem.', 'en' => 'Of course, we have a table for two.', 'trigger_goal' => 'ask-table-two', 'priority' => 100],
                 ],
                 'goals' => [
-                    ['slug' => 'staliukas', 'label' => 'Greet her and ask for a table', 'intent' => 'Greet the waitress politely and ask for a table (optionally for two people).', 'example' => 'Laba diena! Norėčiau staliuko dviem, prašau.', 'next' => 'sodinimas'],
-                    ['slug' => 'meniu-klausimas', 'label' => 'Ask what is on the menu', 'intent' => 'Greet her and ask what they have on the menu today.', 'example' => 'Sveiki! Ką turite valgiaraštyje?', 'next' => 'meniu'],
+                    ['slug' => 'ask-table', 'label' => 'Ask for a table', 'intent' => 'The learner greets the waitress and asks for a table.', 'example' => 'Laba diena. Norėčiau staliuko, prašau.', 'next' => 'sodinimas'],
+                    ['slug' => 'ask-table-two', 'label' => 'Ask for a table for two', 'intent' => 'The learner asks for a table for two people.', 'example' => 'Norėčiau staliuko dviem, prašau.', 'next' => 'sodinimas'],
                 ],
             ],
             [
                 'slug' => 'sodinimas',
-                'setting' => 'Rasa picks up two menus and steps out from behind the counter.',
+                'setting' => 'Rasa shows the learner a table.',
                 'lines' => [
-                    ['lt' => 'Žinoma. Prašau sekite paskui mane — štai staliukas prie lango.', 'en' => 'Of course. Please follow me — here is a table by the window.', 'trigger_goal' => 'staliukas', 'priority' => 100],
-                    ['lt' => 'Turime laisvą staliuką. Prašom sėstis.', 'en' => 'We have a free table. Please have a seat.', 'trigger_goal' => 'staliukas', 'priority' => 80],
-                    ['lt' => 'Puiku! Ar norite sėdėti prie lango, ar kampe?', 'en' => 'Great! Would you like to sit by the window or in the corner?', 'priority' => 10],
+                    ['lt' => 'Prašom, sėskitės čia.', 'en' => 'Please, sit here.'],
+                    ['lt' => 'Šis staliukas laisvas.', 'en' => 'This table is free.'],
+                    ['lt' => 'Čia galite atsisėsti.', 'en' => 'You can sit here.'],
+                    ['lt' => 'Prašom. Štai meniu.', 'en' => 'Here you are. Here is the menu.', 'trigger_goal' => 'thank-menu', 'priority' => 100],
+                    ['lt' => 'Nėra už ką. Štai meniu.', 'en' => 'You are welcome. Here is the menu.', 'trigger_goal' => 'thank-menu', 'priority' => 100],
+                    ['lt' => 'Taip, štai meniu.', 'en' => 'Yes, here is the menu.', 'trigger_goal' => 'ask-menu', 'priority' => 100],
+                    ['lt' => 'Žinoma. Prašom, meniu.', 'en' => 'Of course. Here is the menu.', 'trigger_goal' => 'ask-menu', 'priority' => 100],
                 ],
                 'goals' => [
-                    ['slug' => 'aciu-meniu', 'label' => 'Thank her and ask for the menu', 'intent' => 'Thank her and ask if you could have the menu.', 'example' => 'Ačiū. Ar galėčiau gauti meniu?', 'next' => 'meniu'],
-                    ['slug' => 'prie-lango', 'label' => 'Say you prefer the window seat', 'intent' => 'Say that you would prefer to sit by the window.', 'example' => 'Norėčiau sėdėti prie lango, prašau.', 'next' => 'meniu'],
+                    ['slug' => 'thank-menu', 'label' => 'Thank her', 'intent' => 'The learner thanks the waitress.', 'example' => 'Ačiū.', 'next' => 'meniu'],
+                    ['slug' => 'ask-menu', 'label' => 'Ask for the menu', 'intent' => 'The learner asks for the menu.', 'example' => 'Ar galiu gauti meniu?', 'next' => 'meniu'],
                 ],
             ],
             [
                 'slug' => 'meniu',
-                'setting' => 'The menu is on the table in front of you.',
+                'setting' => 'The learner looks at a short menu.',
                 'lines' => [
-                    ['lt' => 'Štai mūsų valgiaraštis. Šiandien rekomenduoju cepelinus.', 'en' => 'Here is our menu. Today I recommend the cepelinai.'],
-                    ['lt' => 'Prašom, čia meniu. Ką norėtumėte užsisakyti?', 'en' => 'Here you are, the menu. What would you like to order?'],
-                    ['lt' => 'Viskas šviežia. Ar jau žinote, ko norėsite?', 'en' => 'Everything is fresh. Do you already know what you would like?'],
+                    ['lt' => 'Ko norėsite valgyti?', 'en' => 'What would you like to eat?'],
+                    ['lt' => 'Turime sriubos, salotų ir vištienos.', 'en' => 'We have soup, salad, and chicken.'],
+                    ['lt' => 'Ką pasirinksite iš meniu?', 'en' => 'What will you choose from the menu?'],
+                    ['lt' => 'Gerai, viena sriuba.', 'en' => 'Alright, one soup.', 'trigger_goal' => 'order-soup', 'priority' => 100],
+                    ['lt' => 'Žinoma, sriuba.', 'en' => 'Of course, soup.', 'trigger_goal' => 'order-soup', 'priority' => 100],
+                    ['lt' => 'Gerai, salotos.', 'en' => 'Alright, salad.', 'trigger_goal' => 'order-salad', 'priority' => 100],
+                    ['lt' => 'Puiku, atnešiu salotų.', 'en' => 'Great, I will bring salad.', 'trigger_goal' => 'order-salad', 'priority' => 100],
+                    ['lt' => 'Puiku, vištiena.', 'en' => 'Great, chicken.', 'trigger_goal' => 'order-chicken', 'priority' => 100],
+                    ['lt' => 'Gerai, viena vištiena.', 'en' => 'Alright, one chicken.', 'trigger_goal' => 'order-chicken', 'priority' => 100],
                 ],
                 'props' => $menu,
                 'goals' => [
-                    ['slug' => 'uzsakymas', 'label' => 'Order a dish from the menu', 'intent' => 'Order one dish from the menu politely, naming a dish that appears on the menu (for example cepelinai, šaltibarščiai, bulviniai blynai).', 'example' => 'Norėčiau cepelinų su mėsa, prašau.', 'next' => 'gerimai'],
-                    ['slug' => 'rekomendacija', 'label' => 'Ask her what she recommends', 'intent' => 'Ask the waitress what she recommends or what the most popular dish is.', 'example' => 'Ką jūs rekomenduotumėte?', 'next' => 'rekomendacija-atsakymas'],
+                    ['slug' => 'order-soup', 'label' => 'Order soup', 'intent' => 'The learner orders soup politely.', 'example' => 'Norėčiau sriubos, prašau.', 'next' => 'gerimas'],
+                    ['slug' => 'order-salad', 'label' => 'Order salad', 'intent' => 'The learner orders salad politely.', 'example' => 'Norėčiau salotų, prašau.', 'next' => 'gerimas'],
+                    ['slug' => 'order-chicken', 'label' => 'Order chicken', 'intent' => 'The learner orders chicken politely.', 'example' => 'Norėčiau vištienos, prašau.', 'next' => 'gerimas'],
                 ],
             ],
             [
-                'slug' => 'rekomendacija-atsakymas',
-                'setting' => 'Rasa leans in a little, happy to be asked.',
+                'slug' => 'gerimas',
+                'setting' => 'Rasa asks about a drink.',
                 'lines' => [
-                    ['lt' => 'Rekomenduoju cepelinus su mėsa — tai mūsų garsiausias patiekalas.', 'en' => 'I recommend cepelinai with meat — it is our most famous dish.'],
-                    ['lt' => 'Vasarą visi renkasi šaltibarščius. Labai gaivu!', 'en' => 'In summer everyone chooses cold beetroot soup. Very refreshing!'],
-                    ['lt' => 'Bulviniai blynai su grietine yra labai skanūs.', 'en' => 'The potato pancakes with sour cream are very tasty.'],
-                ],
-                'props' => $menu,
-                'goals' => [
-                    ['slug' => 'uzsakymas-2', 'label' => 'Order that dish', 'intent' => 'Accept the recommendation and order a dish from the menu politely.', 'example' => 'Gerai, tada prašau cepelinų.', 'next' => 'gerimai'],
-                ],
-            ],
-            [
-                'slug' => 'gerimai',
-                'setting' => 'Rasa writes the order in her notepad.',
-                'lines' => [
-                    ['lt' => 'Puikus pasirinkimas. O ką gersite?', 'en' => 'Excellent choice. And what will you drink?'],
-                    ['lt' => 'Gerai. Ar norėsite ko nors atsigerti?', 'en' => 'Alright. Would you like something to drink?'],
-                    ['lt' => 'Užrašiau. Kokį gėrimą jums atnešti?', 'en' => 'Noted. What drink should I bring you?'],
+                    ['lt' => 'Ką gersite?', 'en' => 'What will you drink?'],
+                    ['lt' => 'Ar norėsite vandens ar arbatos?', 'en' => 'Would you like water or tea?'],
+                    ['lt' => 'Kokio gėrimo norėsite?', 'en' => 'What drink would you like?'],
+                    ['lt' => 'Gerai, atnešiu vandens.', 'en' => 'Alright, I will bring water.', 'trigger_goal' => 'order-water', 'priority' => 100],
+                    ['lt' => 'Žinoma, vandens.', 'en' => 'Of course, water.', 'trigger_goal' => 'order-water', 'priority' => 100],
+                    ['lt' => 'Gerai, viena arbata.', 'en' => 'Alright, one tea.', 'trigger_goal' => 'order-tea', 'priority' => 100],
+                    ['lt' => 'Puiku, arbata.', 'en' => 'Great, tea.', 'trigger_goal' => 'order-tea', 'priority' => 100],
+                    ['lt' => 'Gerai, be gėrimo.', 'en' => 'Alright, no drink.', 'trigger_goal' => 'no-drink', 'priority' => 100],
+                    ['lt' => 'Supratau, gėrimo nereikia.', 'en' => 'I understand, no drink is needed.', 'trigger_goal' => 'no-drink', 'priority' => 100],
                 ],
                 'goals' => [
-                    ['slug' => 'gerimas', 'label' => 'Order a drink', 'intent' => 'Order a drink, for example water, tea, coffee, juice or beer.', 'example' => 'Prašau stiklinę vandens.', 'next' => 'desertas'],
-                    ['slug' => 'vandens-klausimas', 'label' => 'Ask if the water is free', 'intent' => 'Ask whether the tap water is free or how much the water costs.', 'example' => 'Ar vanduo nemokamas?', 'next' => 'desertas'],
-                ],
-            ],
-            [
-                'slug' => 'desertas',
-                'setting' => 'The food arrives, steaming. Later Rasa comes back.',
-                'lines' => [
-                    ['lt' => 'Skanaus! Vėliau — ar norėsite deserto?', 'en' => 'Enjoy your meal! Later — would you like dessert?'],
-                    ['lt' => 'Ar viskas buvo skanu? Gal atnešti šakočio?', 'en' => 'Was everything tasty? Shall I bring some šakotis?'],
-                    ['lt' => 'Matau, kad patiko. Ar paliksite vietos desertui?', 'en' => 'I see you liked it. Will you leave room for dessert?'],
-                ],
-                'goals' => [
-                    ['slug' => 'taip-desertas', 'label' => 'Say yes and order dessert', 'intent' => 'Say yes and order a dessert, for example šakotis.', 'example' => 'Taip, prašau gabalėlį šakočio.', 'next' => 'saskaita'],
-                    ['slug' => 'ne-desertas', 'label' => 'Politely decline', 'intent' => 'Politely decline dessert and say the meal was delicious.', 'example' => 'Ne, ačiū. Buvo labai skanu.', 'next' => 'saskaita'],
-                ],
-            ],
-            [
-                'slug' => 'saskaita',
-                'setting' => 'Your plate is cleared. Time to settle up.',
-                'lines' => [
-                    ['lt' => 'Ar dar ko nors pageidausite?', 'en' => 'Would you like anything else?'],
-                    ['lt' => 'Viskas gerai? Ar galiu dar kuo padėti?', 'en' => 'Is everything alright? Can I help with anything else?'],
-                    ['lt' => 'Tikiuosi, kad patiko. Ar dar ko nors reikia?', 'en' => 'I hope you enjoyed it. Do you need anything else?'],
-                ],
-                'goals' => [
-                    ['slug' => 'prasau-saskaita', 'label' => 'Ask for the bill', 'intent' => 'Ask politely for the bill.', 'example' => 'Prašau sąskaitą.', 'next' => 'mokejimas'],
+                    ['slug' => 'order-water', 'label' => 'Order water', 'intent' => 'The learner orders water.', 'example' => 'Vandens, prašau.', 'next' => 'mokejimas'],
+                    ['slug' => 'order-tea', 'label' => 'Order tea', 'intent' => 'The learner orders tea.', 'example' => 'Arbatos, prašau.', 'next' => 'mokejimas'],
+                    ['slug' => 'no-drink', 'label' => 'Say no drink', 'intent' => 'The learner says they do not want a drink.', 'example' => 'Nieko negersiu, ačiū.', 'next' => 'mokejimas'],
                 ],
             ],
             [
                 'slug' => 'mokejimas',
-                'setting' => 'Rasa brings the bill on a small wooden tray.',
+                'setting' => 'The meal is finished. Rasa brings the bill.',
                 'lines' => [
-                    ['lt' => 'Prašom, sąskaita — dvidešimt trys eurai. Mokėsite grynais ar kortele?', 'en' => 'Here you are, the bill — twenty three euros. Will you pay in cash or by card?'],
-                    ['lt' => 'Iš viso dvidešimt trys eurai. Kaip norėtumėte mokėti?', 'en' => 'Twenty three euros in total. How would you like to pay?'],
-                    ['lt' => 'Štai sąskaita. Ar galima kortele?', 'en' => 'Here is the bill. Card is fine?'],
+                    ['lt' => 'Štai sąskaita. Kaip mokėsite?', 'en' => 'Here is the bill. How will you pay?'],
+                    ['lt' => 'Iš viso dešimt eurų.', 'en' => 'Ten euros in total.'],
+                    ['lt' => 'Ar mokėsite kortele?', 'en' => 'Will you pay by card?'],
+                    ['lt' => 'Ačiū. Mokėjimas kortele priimtas.', 'en' => 'Thank you. Card payment accepted.', 'trigger_goal' => 'pay-card', 'priority' => 100],
+                    ['lt' => 'Puiku. Kortele apmokėta.', 'en' => 'Great. Paid by card.', 'trigger_goal' => 'pay-card', 'priority' => 100],
+                    ['lt' => 'Ačiū. Geros dienos!', 'en' => 'Thank you. Have a good day!', 'trigger_goal' => 'thank-goodbye', 'priority' => 100],
+                    ['lt' => 'Prašom. Iki pasimatymo!', 'en' => 'You are welcome. See you!', 'trigger_goal' => 'thank-goodbye', 'priority' => 100],
                 ],
                 'goals' => [
-                    ['slug' => 'kortele', 'label' => 'Say you will pay by card', 'intent' => 'Say that you will pay by card.', 'example' => 'Mokėsiu kortele, prašau.', 'next' => 'atsisveikinimas'],
-                    ['slug' => 'grynais', 'label' => 'Say you will pay in cash', 'intent' => 'Say that you will pay in cash.', 'example' => 'Mokėsiu grynais.', 'next' => 'atsisveikinimas'],
+                    ['slug' => 'pay-card', 'label' => 'Pay by card', 'intent' => 'The learner says they will pay by card.', 'example' => 'Mokėsiu kortele.', 'next' => null],
+                    ['slug' => 'thank-goodbye', 'label' => 'Thank and say goodbye', 'intent' => 'The learner thanks the waitress and says goodbye.', 'example' => 'Ačiū, viso gero.', 'next' => null],
                 ],
-            ],
-            [
-                'slug' => 'atsisveikinimas',
-                'setting' => 'Payment done. Rasa walks you to the door.',
-                'lines' => [
-                    ['lt' => 'Ačiū, kad apsilankėte! Laukiame jūsų vėl.', 'en' => 'Thank you for visiting! We look forward to seeing you again.'],
-                    ['lt' => 'Labai ačiū. Geros dienos!', 'en' => 'Thank you very much. Have a good day!'],
-                    ['lt' => 'Ačiū! Iki kito karto.', 'en' => 'Thank you! Until next time.'],
-                ],
-                'goals' => [
-                    ['slug' => 'sudie', 'label' => 'Thank her and say goodbye', 'intent' => 'Thank her and say goodbye.', 'example' => 'Ačiū jums! Viso gero.', 'next' => 'pabaiga'],
-                ],
-            ],
-            [
-                'slug' => 'pabaiga',
-                'setting' => 'You step back out onto the street — a whole meal ordered in Lithuanian.',
-                'lines' => [
-                    ['lt' => 'Puiku! Tu ką tik pavalgei restorane lietuviškai.', 'en' => 'Great! You just ate at a restaurant in Lithuanian.'],
-                ],
-                'goals' => [],
             ],
         ];
     }

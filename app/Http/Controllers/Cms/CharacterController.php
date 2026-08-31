@@ -1,0 +1,83 @@
+<?php
+
+namespace App\Http\Controllers\Cms;
+
+use App\ContentStatus;
+use App\Http\Controllers\Controller;
+use App\Models\Character;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+use Inertia\Response;
+
+class CharacterController extends Controller
+{
+    public function index(): Response
+    {
+        return Inertia::render('Characters/Index', [
+            'characters' => Character::query()
+                ->withCount('scenarios')
+                ->orderBy('sort_order')
+                ->orderBy('name')
+                ->get()
+                ->map(fn (Character $character): array => [
+                    'id' => $character->id,
+                    'slug' => $character->slug,
+                    'name' => $character->name,
+                    'role' => $character->role,
+                    'image_path' => $character->image_path,
+                    'intro' => $character->intro,
+                    'praise_lines' => $character->praise_lines,
+                    'encouragement_lines' => $character->encouragement_lines,
+                    'sort_order' => $character->sort_order,
+                    'status' => $character->status->value,
+                    'scenarios_count' => $character->scenarios_count,
+                ]),
+            'statuses' => array_column(ContentStatus::cases(), 'value'),
+        ]);
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        Character::query()->create($this->validated($request));
+
+        return back()->with('success', 'Character created.');
+    }
+
+    public function update(Request $request, Character $character): RedirectResponse
+    {
+        $character->update($this->validated($request, $character));
+
+        return back()->with('success', 'Character updated.');
+    }
+
+    private function validated(Request $request, ?Character $character = null): array
+    {
+        $data = $request->validate([
+            'slug' => ['required', 'string', 'max:80', Rule::unique('characters', 'slug')->ignore($character)],
+            'name' => ['required', 'string', 'max:120'],
+            'role' => ['required', 'string', 'max:120'],
+            'image_path' => ['nullable', 'string', 'max:255'],
+            'intro' => ['nullable', 'string', 'max:500'],
+            'praise_lines' => ['nullable', 'string'],
+            'encouragement_lines' => ['nullable', 'string'],
+            'sort_order' => ['required', 'integer', 'min:0'],
+            'status' => ['required', Rule::enum(ContentStatus::class)],
+        ]);
+
+        $data['praise_lines'] = $this->lines($data['praise_lines'] ?? '');
+        $data['encouragement_lines'] = $this->lines($data['encouragement_lines'] ?? '');
+
+        return $data;
+    }
+
+    private function lines(string $value): array
+    {
+        return collect(preg_split('/\r\n|\r|\n/', $value) ?: [])
+            ->map(fn (string $line): string => trim($line))
+            ->filter()
+            ->values()
+            ->all();
+    }
+}

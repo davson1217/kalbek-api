@@ -25,6 +25,7 @@ class UpdateProfileRequest extends FormRequest
         return [
             'display_name' => ['sometimes', 'required', 'string', 'max:255'],
             'avatar_character' => ['sometimes', 'required', 'string', 'exists:characters,slug'],
+            'strict_speech_mode' => ['sometimes', 'required', 'boolean'],
         ];
     }
 }

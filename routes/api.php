@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\LessonCompletionController;
 use App\Http\Controllers\Api\V1\LessonProgressController;
 use App\Http\Controllers\Api\V1\OAuthExchangeController;
+use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\ScenarioController;
 use App\Http\Controllers\Api\V1\SpeechCheckController;
@@ -24,6 +25,10 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->name('auth.register');
     Route::post('/auth/login', [AuthController::class, 'login'])
         ->name('auth.login');
+    Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot'])
+        ->name('auth.password.forgot');
+    Route::post('/auth/reset-password', [PasswordResetController::class, 'reset'])
+        ->name('auth.password.reset');
     Route::post('/auth/oauth/exchange', OAuthExchangeController::class)
         ->name('auth.oauth.exchange');
 

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
     'scene_id',
@@ -32,6 +33,13 @@ class Goal extends Model
     public function nextScene(): BelongsTo
     {
         return $this->belongsTo(Scene::class, 'next_scene_id');
+    }
+
+    public function responseLines(): HasMany
+    {
+        return $this->hasMany(NpcLine::class, 'trigger_goal_id')
+            ->orderByDesc('priority')
+            ->orderBy('sort_order');
     }
 
     protected function casts(): array

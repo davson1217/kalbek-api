@@ -29,6 +29,8 @@ class ProfileResource extends JsonResource
             'streak' => $this->streak,
             'longest_streak' => $this->longest_streak,
             'last_practice_date' => $this->last_practice_date?->toDateString(),
+            'strict_speech_mode' => (bool) $this->user?->strict_speech_mode,
+            'strict_speech_mode_explanation' => 'Strict mode makes speech checks more demanding. Kalbek expects your answer to match the task more closely and may ask you to try again for grammar, vocabulary, or relevance issues.',
             'language_level' => $languageLevel ? [
                 'language_code' => $languageLevel->language_code,
                 'current_cefr_level' => $languageLevel->current_cefr_level->value,

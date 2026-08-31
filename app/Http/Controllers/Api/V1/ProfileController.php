@@ -38,9 +38,14 @@ class ProfileController extends Controller
                 ->id;
         }
 
+        if (array_key_exists('strict_speech_mode', $data)) {
+            $user->strict_speech_mode = $data['strict_speech_mode'];
+            $user->save();
+        }
+
         $profile->save();
 
-        return ProfileResource::make($profile->load('avatarCharacter', 'user.languageLevels'));
+        return ProfileResource::make($profile->load('avatarCharacter', 'user.languageLevels', 'user'));
     }
 
     private function profileFor(User $user): Profile

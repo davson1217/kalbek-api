@@ -117,4 +117,6 @@ KALBEK_FRONTEND_URL=http://localhost:3000
 
 The Google Cloud OAuth redirect URI must match `GOOGLE_REDIRECT_URI`.
 
+Password reset and welcome emails use Laravel notifications. In local Docker, open Mailpit at `http://localhost:8025` to view outgoing welcome emails and password reset links. Reset links point to `KALBEK_FRONTEND_URL`, so keep that value aligned with the frontend dev server URL.
+
 The CMS is intentionally minimal at this stage. The next phase should build the Inertia React CMS resources around the new schema.

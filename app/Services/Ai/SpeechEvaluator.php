@@ -14,7 +14,7 @@ class SpeechEvaluator implements SpeechEvaluatorContract
     /**
      * @return array{transcript: string, pass: bool, feedback: string, corrected: string, suggestion: string, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
      */
-    public function evaluate(UploadedFile $audio, string $intent, string $example = '', string $context = ''): array
+    public function evaluate(UploadedFile $audio, string $intent, string $example = '', string $context = '', bool $strict = false): array
     {
         $transcript = trim((string) Transcription::fromUpload($audio)
             ->language('lt')
@@ -42,11 +42,16 @@ class SpeechEvaluator implements SpeechEvaluatorContract
             ];
         }
 
+        $normalizedTranscript = $this->normalizeTranscriptForJudging($transcript);
         $verdict = $this->verdictArray(SpeakingJudge::make()->prompt(
             "Situation: {$context}\n"
             ."The learner must express: {$intent}\n"
             ."Model phrasing: {$example}\n"
-            ."The learner said, transcribed: \"{$transcript}\"",
+            ."The learner may answer naturally and include extra social detail. Judge whether the current communicative goal was answered, not whether the exact model phrase was repeated.\n"
+            .'Evaluation mode: '.($strict ? 'STRICT. Fail answers that only loosely match the task, use mostly English, omit the required meaning, or contain grammar/vocabulary problems that make the role-play response unnatural. Require task_completion of at least 75 for pass.' : 'NORMAL. Be encouraging for beginners and pass understandable Lithuanian that satisfies the task, even with small grammar or case slips.')."\n"
+            ."Raw speech transcript: \"{$transcript}\"\n"
+            ."Normalized transcript for judging: \"{$normalizedTranscript}\"\n"
+            .'Judge the spoken answer, not the transcript formatting.',
             timeout: 45,
         ));
 
@@ -56,7 +61,7 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         return [
             'transcript' => $transcript,
             'pass' => (bool) ($verdict['pass'] ?? false),
-            'feedback' => (string) ($verdict['feedback'] ?? 'Try that again.'),
+            'feedback' => $this->speechFirstFeedback((string) ($verdict['feedback'] ?? 'Try that again.'), $example),
             'corrected' => (string) ($verdict['corrected'] ?? ''),
             'suggestion' => $example,
             'scores' => $scores,
@@ -92,6 +97,40 @@ class SpeechEvaluator implements SpeechEvaluatorContract
     private function score(mixed $value): int
     {
         return max(0, min(100, (int) $value));
+    }
+
+    private function normalizeTranscriptForJudging(string $transcript): string
+    {
+        return str($transcript)
+            ->replaceMatches('/\blabadiena\b/iu', 'Laba diena')
+            ->replaceMatches('/\blabasdiena\b/iu', 'Labas diena')
+            ->toString();
+    }
+
+    private function speechFirstFeedback(string $feedback, string $example): string
+    {
+        $textOnlyTerms = [
+            'capital',
+            'capitalization',
+            'capitalise',
+            'capitalize',
+            'case',
+            'casing',
+            'punctuation',
+            'spell',
+            'spelling',
+            'typed',
+            'wrote',
+            'written',
+        ];
+
+        if (! str($feedback)->lower()->contains($textOnlyTerms)) {
+            return $feedback;
+        }
+
+        return $example !== ''
+            ? "That was understandable. A more natural spoken version is: {$example}"
+            : 'That was understandable. Try saying the phrase a little more clearly and naturally.';
     }
 
     /**

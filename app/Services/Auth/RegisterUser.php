@@ -4,6 +4,7 @@ namespace App\Services\Auth;
 
 use App\Models\Character;
 use App\Models\User;
+use App\Notifications\WelcomeToKalbek;
 use Illuminate\Support\Facades\DB;
 
 class RegisterUser
@@ -21,6 +22,8 @@ class RegisterUser
                 'avatar_character_id' => $character?->id,
                 'display_name' => $data['name'],
             ]);
+
+            $user->notify(new WelcomeToKalbek);
 
             return $user->load('profile.avatarCharacter');
         });

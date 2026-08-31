@@ -2,8 +2,11 @@
 
 namespace App\Providers;
 
+use App\Contracts\DialogueOrchestratorContract;
 use App\Contracts\SpeechEvaluatorContract;
 use App\Contracts\TextToSpeechSynthesizer;
+use App\Services\Ai\DialogueOrchestrator;
+use App\Services\Ai\FakeDialogueOrchestrator;
 use App\Services\Ai\FakeSpeechEvaluator;
 use App\Services\Ai\FakeTextToSpeechSynthesizer;
 use App\Services\Ai\LaravelAiTextToSpeechSynthesizer;
@@ -21,6 +24,12 @@ class AppServiceProvider extends ServiceProvider
             return config('services.kalbek.ai_mode') === 'fake'
                 ? new FakeSpeechEvaluator
                 : new SpeechEvaluator;
+        });
+
+        $this->app->bind(DialogueOrchestratorContract::class, function () {
+            return config('services.kalbek.ai_mode') === 'fake'
+                ? new FakeDialogueOrchestrator
+                : new DialogueOrchestrator;
         });
 
         $this->app->bind(TextToSpeechSynthesizer::class, function () {

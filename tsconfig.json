@@ -7,9 +7,8 @@
         "strict": true,
         "target": "ES2022",
         "types": ["vite/client"],
-        "baseUrl": ".",
         "paths": {
-            "@/*": ["resources/js/*"]
+            "@/*": ["./resources/js/*"]
         },
         "skipLibCheck": true,
         "noEmit": true

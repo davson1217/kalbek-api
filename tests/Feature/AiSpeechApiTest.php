@@ -2,8 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Ai\Agents\DialogueRouter;
 use App\Ai\Agents\SpeakingJudge;
+use App\Models\Goal;
+use App\Models\NpcLine;
+use App\Models\Scenario;
+use App\Models\Scene;
 use App\Models\User;
+use Database\Seeders\A1ScenarioSeeder;
 use Database\Seeders\CharacterSeeder;
 use Database\Seeders\RestaurantScenarioSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -93,7 +99,7 @@ class AiSpeechApiTest extends TestCase
         $response = $this->postJson('/api/v1/speak-check', [
             'scenario_id' => 'restoranas',
             'scene_id' => 'atvykimas',
-            'goal_id' => 'staliukas',
+            'goal_id' => 'ask-table-two',
             'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
             'intent' => 'Ask for a table for two people.',
             'example' => 'Norėčiau staliuko dviem, prašau.',
@@ -123,7 +129,9 @@ class AiSpeechApiTest extends TestCase
         ]);
 
         Transcription::assertGenerated(fn ($prompt): bool => $prompt->language === 'lt');
-        SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt->contains('Ask for a table'));
+        SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
+            ->contains('Ask for a table')
+            && $prompt->contains('Judge whether the current communicative goal was answered'));
     }
 
     public function test_fake_speech_check_returns_deterministic_feedback_without_provider_calls(): void
@@ -142,7 +150,7 @@ class AiSpeechApiTest extends TestCase
         $response = $this->postJson('/api/v1/speak-check', [
             'scenario_id' => 'restoranas',
             'scene_id' => 'atvykimas',
-            'goal_id' => 'staliukas',
+            'goal_id' => 'ask-table',
             'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
             'intent' => 'Ask whether food is available.',
             'example' => 'Ar turite maisto?',
@@ -169,5 +177,207 @@ class AiSpeechApiTest extends TestCase
 
         Transcription::assertNothingGenerated();
         SpeakingJudge::assertNeverPrompted();
+    }
+
+    public function test_speech_check_passes_strict_mode_to_the_speaking_judge(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['strict_speech_mode' => true]));
+        Transcription::fake(['Kavos, prašau.']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'feedback' => 'That works well.',
+            'corrected' => 'Kavos, prašau.',
+            'scores' => [
+                'grammar' => 88,
+                'vocabulary' => 86,
+                'cohesion' => 82,
+                'task_completion' => 91,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, RestaurantScenarioSeeder::class]);
+
+        $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'restoranas',
+            'scene_id' => 'atvykimas',
+            'goal_id' => 'ask-table',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'Order coffee politely.',
+            'example' => 'Kavos, prašau.',
+            'context' => 'At a cafe.',
+        ])->assertOk();
+
+        SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt->contains('Evaluation mode: STRICT'));
+        $this->assertDatabaseHas('speaking_attempts', [
+            'transcript' => 'Kavos, prašau.',
+            'metadata->strict_speech_mode' => true,
+        ]);
+    }
+
+    public function test_speech_check_feedback_avoids_text_formatting_language_for_spoken_answers(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Labadiena, mano vardas devydas.']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'feedback' => 'Great effort, just watch the spelling and capitalize the name.',
+            'corrected' => 'Laba diena, mano vardas Deivydas.',
+            'scores' => [
+                'grammar' => 80,
+                'vocabulary' => 80,
+                'cohesion' => 80,
+                'task_completion' => 90,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, A1ScenarioSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'prisistatymas',
+            'scene_id' => 'pasisveikinimas',
+            'goal_id' => 'intro-name',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner says their name.',
+            'example' => 'Laba diena, mano vardas Deivydas.',
+            'context' => 'Introducing yourself.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('transcript', 'Labadiena, mano vardas devydas.')
+            ->assertJsonPath('feedback', 'That was understandable. A more natural spoken version is: Laba diena, mano vardas Deivydas.');
+
+        SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
+            ->contains('Raw speech transcript: "Labadiena, mano vardas devydas."')
+            && $prompt->contains('Normalized transcript for judging: "Laba diena, mano vardas devydas."')
+            && $prompt->contains('Judge the spoken answer, not the transcript formatting.'));
+    }
+
+    public function test_speech_check_keeps_authored_progression_even_when_utterance_mentions_later_intent(): void
+    {
+        Config::set('services.kalbek.ai_mode', 'fake');
+        Config::set('services.kalbek.fake_speech_transcript', 'Laba diena, man skauda galvą.');
+        Sanctum::actingAs(User::factory()->create());
+
+        $this->seed(CharacterSeeder::class);
+
+        $scenario = Scenario::factory()->create([
+            'slug' => 'pharmacy-visit',
+            'start_scene_slug' => 'greeting',
+        ]);
+        $greeting = Scene::factory()->for($scenario)->create(['slug' => 'greeting', 'sort_order' => 10]);
+        $symptoms = Scene::factory()->for($scenario)->create(['slug' => 'symptoms', 'sort_order' => 20]);
+        $medicine = Scene::factory()->for($scenario)->create(['slug' => 'medicine', 'sort_order' => 30]);
+
+        $sayHello = Goal::factory()->for($greeting)->create([
+            'slug' => 'say-hello',
+            'label' => 'Greet the pharmacist',
+            'intent' => 'The learner greets the pharmacist politely.',
+            'example' => 'Laba diena.',
+            'next_scene_id' => $symptoms->id,
+        ]);
+        $headache = Goal::factory()->for($symptoms)->create([
+            'slug' => 'headache',
+            'label' => 'Say you have a headache',
+            'intent' => 'The learner explains that they have a headache.',
+            'example' => 'Man skauda galvą.',
+            'next_scene_id' => $medicine->id,
+        ]);
+        NpcLine::factory()->for($greeting)->create([
+            'trigger_goal_id' => $sayHello->id,
+            'lt' => 'Sveiki. Kas jums yra?',
+            'en' => 'Hello. What is wrong?',
+            'priority' => 100,
+        ]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => $scenario->slug,
+            'scene_id' => $greeting->slug,
+            'goal_id' => $sayHello->slug,
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => $sayHello->intent,
+            'example' => $sayHello->example,
+            'context' => 'At a pharmacy.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('pass', true)
+            ->assertJsonPath('dialogue.matched_goal_id', 'say-hello')
+            ->assertJsonPath('dialogue.additional_goal_ids', [])
+            ->assertJsonPath('dialogue.next_scene_id', 'symptoms')
+            ->assertJsonPath('dialogue.reply_scene_id', 'greeting')
+            ->assertJsonPath('dialogue.reply_trigger_goal_id', 'say-hello')
+            ->assertJsonPath('dialogue.should_complete', false);
+
+        $this->assertDatabaseHas('speaking_attempts', [
+            'transcript' => 'Laba diena, man skauda galvą.',
+            'goal_id' => $sayHello->id,
+        ]);
+    }
+
+    public function test_dialogue_router_is_not_used_for_authored_goal_progression(): void
+    {
+        Config::set('services.kalbek.ai_mode', 'live');
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Kiek tai kainuoja?']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'feedback' => 'That works well.',
+            'corrected' => 'Kiek tai kainuoja?',
+            'scores' => [
+                'grammar' => 90,
+                'vocabulary' => 90,
+                'cohesion' => 90,
+                'task_completion' => 90,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        DialogueRouter::fake();
+
+        $this->seed(CharacterSeeder::class);
+
+        $scenario = Scenario::factory()->create([
+            'slug' => 'pharmacy-visit',
+            'start_scene_slug' => 'medicine',
+        ]);
+        $medicine = Scene::factory()->for($scenario)->create(['slug' => 'medicine', 'sort_order' => 10]);
+        $payment = Scene::factory()->for($scenario)->create(['slug' => 'payment', 'sort_order' => 20]);
+        $askPrice = Goal::factory()->for($medicine)->create([
+            'slug' => 'ask-price',
+            'label' => 'Ask the price',
+            'intent' => 'The learner asks how much the medicine costs.',
+            'example' => 'Kiek tai kainuoja?',
+            'next_scene_id' => $payment->id,
+        ]);
+        NpcLine::factory()->for($medicine)->create([
+            'trigger_goal_id' => $askPrice->id,
+            'lt' => 'Šis vaistas kainuoja šešis eurus.',
+            'en' => 'This medicine costs six euros.',
+            'priority' => 100,
+        ]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => $scenario->slug,
+            'scene_id' => $medicine->slug,
+            'goal_id' => $askPrice->slug,
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => $askPrice->intent,
+            'example' => $askPrice->example,
+            'context' => 'At a pharmacy.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('dialogue.next_scene_id', 'payment')
+            ->assertJsonPath('dialogue.reply_scene_id', 'medicine')
+            ->assertJsonPath('dialogue.reply_trigger_goal_id', 'ask-price')
+            ->assertJsonPath('dialogue.should_complete', false)
+            ->assertJsonPath('dialogue.reason', 'Advance by the selected authored goal.');
+
+        DialogueRouter::assertNeverPrompted();
     }
 }

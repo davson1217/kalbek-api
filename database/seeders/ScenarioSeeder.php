@@ -8,6 +8,10 @@ class ScenarioSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call(RestaurantScenarioSeeder::class);
+        $this->call([
+            RestaurantScenarioSeeder::class,
+            PharmacyVisitScenarioSeeder::class,
+            A1ScenarioSeeder::class,
+        ]);
     }
 }
