@@ -1,23 +1,25 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowLeft, Edit3, Plus } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Edit3, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { Modal } from '../../Components/Cms/Modal';
 import { Breadcrumbs, PageHeader, PrimaryButton, SecondaryButton, StatusBadge } from '../../Components/Cms/PageChrome';
 import { SceneForm } from '../../Components/Cms/Scenarios/ContentForms';
 import { ScenarioForm } from '../../Components/Cms/Scenarios/ScenarioForm';
+import { ScenarioPreview } from '../../Components/Cms/Scenarios/ScenarioPreview';
 import { ScenePanel } from '../../Components/Cms/Scenarios/ScenePanel';
 import { CmsLayout } from '../../Layouts/CmsLayout';
-import type { CharacterOption, ScenarioDetail } from '../../types';
+import type { CharacterOption, ScenarioAuditIssue, ScenarioDetail } from '../../types';
 
 interface Props {
     scenario: ScenarioDetail;
+    auditIssues: ScenarioAuditIssue[];
     characters: CharacterOption[];
     statuses: string[];
     levels: string[];
 }
 
-export default function ScenarioShow({ scenario, characters, statuses, levels }: Props) {
+export default function ScenarioShow({ scenario, auditIssues, characters, statuses, levels }: Props) {
     const [editingScenario, setEditingScenario] = useState(false);
     const [creatingScene, setCreatingScene] = useState(false);
     const sceneOptions = scenario.scenes.map((scene) => ({ value: scene.id, label: scene.slug }));
@@ -58,6 +60,10 @@ export default function ScenarioShow({ scenario, characters, statuses, levels }:
                     <Metric label="Props/menu" value={scenario.scenes.reduce((total, scene) => total + scene.props.length, 0)} />
                 </section>
 
+                <FlowAuditPanel issues={auditIssues} />
+
+                <ScenarioPreview scenario={scenario} />
+
                 <section className="space-y-3">
                     <div className="flex items-end justify-between gap-4">
                         <div>
@@ -74,7 +80,7 @@ export default function ScenarioShow({ scenario, characters, statuses, levels }:
                         </div>
                     ) : (
                         scenario.scenes.map((scene) => (
-                            <ScenePanel key={scene.id} scenario={scenario} scene={scene} levels={levels} sceneOptions={sceneOptions} goalOptions={goalOptions} />
+                            <ScenePanel key={scene.id} scenario={scenario} scene={scene} auditIssues={auditIssues.filter((issue) => issue.scene_slug === scene.slug)} levels={levels} sceneOptions={sceneOptions} goalOptions={goalOptions} />
                         ))
                     )}
                 </section>
@@ -89,6 +95,58 @@ export default function ScenarioShow({ scenario, characters, statuses, levels }:
             </Modal>
         </CmsLayout>
     );
+}
+
+function FlowAuditPanel({ issues }: { issues: ScenarioAuditIssue[] }) {
+    const criticalCount = issues.filter((issue) => issue.severity === 'critical').length;
+    const warningCount = issues.filter((issue) => issue.severity === 'warning').length;
+
+    if (issues.length === 0) {
+        return (
+            <section className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-5 shadow-lg shadow-emerald-100/50">
+                <div className="flex items-start gap-3">
+                    <CheckCircle2 className="mt-1 size-5 shrink-0 text-emerald-700" />
+                    <div>
+                        <h2 className="text-lg font-black text-emerald-950">Flow QA passed</h2>
+                        <p className="mt-1 text-sm leading-6 text-emerald-800">This scenario has a valid start scene, opening lines, goal replies, and goal-to-reply relationships.</p>
+                    </div>
+                </div>
+            </section>
+        );
+    }
+
+    return (
+        <section className="rounded-3xl border border-amber-100 bg-amber-50/80 p-5 shadow-lg shadow-amber-100/50">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-1 size-5 shrink-0 text-amber-700" />
+                    <div>
+                        <h2 className="text-lg font-black text-amber-950">Flow QA needs attention</h2>
+                        <p className="mt-1 text-sm leading-6 text-amber-900">Resolve critical issues before publishing. Warnings are content quality risks that can make conversations feel unnatural.</p>
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <StatusBadge tone={criticalCount > 0 ? 'rose' : 'emerald'}>{criticalCount} critical</StatusBadge>
+                    <StatusBadge tone={warningCount > 0 ? 'amber' : 'emerald'}>{warningCount} warnings</StatusBadge>
+                </div>
+            </div>
+            <div className="mt-4 grid gap-2">
+                {issues.map((issue, index) => (
+                    <div key={`${issue.scope}-${issue.message}-${index}`} className="rounded-2xl border border-white/80 bg-white/80 px-4 py-3 text-sm leading-6 text-slate-700 shadow-sm">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge tone={issue.severity === 'critical' ? 'rose' : 'amber'}>{issue.severity}</StatusBadge>
+                            <span className="font-black text-slate-950">{issueLocation(issue)}</span>
+                        </div>
+                        <p className="mt-2">{issue.message}</p>
+                    </div>
+                ))}
+            </div>
+        </section>
+    );
+}
+
+function issueLocation(issue: ScenarioAuditIssue): string {
+    return [issue.scenario_slug, issue.scene_slug, issue.goal_slug].filter(Boolean).join(' / ');
 }
 
 function Metric({ label, value }: { label: string; value: number }) {

@@ -2,12 +2,13 @@
 
 namespace Tests\Feature;
 
-use App\Ai\Agents\DialogueRouter;
 use App\Ai\Agents\SpeakingJudge;
 use App\Models\Goal;
+use App\Models\LearnerLanguageLevel;
 use App\Models\NpcLine;
 use App\Models\Scenario;
 use App\Models\Scene;
+use App\Models\SpeakingAttempt;
 use App\Models\User;
 use Database\Seeders\A1ScenarioSeeder;
 use Database\Seeders\CharacterSeeder;
@@ -79,7 +80,14 @@ class AiSpeechApiTest extends TestCase
 
     public function test_speech_check_transcribes_and_judges_audio(): void
     {
-        Sanctum::actingAs(User::factory()->create());
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        LearnerLanguageLevel::query()->create([
+            'user_id' => $user->id,
+            'language_code' => 'lt',
+            'current_cefr_level' => 'a2',
+            'confidence_score' => 65,
+        ]);
         Transcription::fake(['Norėčiau staliuko dviem.']);
         SpeakingJudge::fake([[
             'pass' => true,
@@ -109,6 +117,14 @@ class AiSpeechApiTest extends TestCase
             'intent' => 'Ask for a table for two people.',
             'example' => 'Norėčiau staliuko dviem, prašau.',
             'context' => 'At a Lithuanian restaurant.',
+            'audio_readiness' => [
+                'duration_seconds' => 1.64,
+                'rms' => 0.031,
+                'peak' => 0.42,
+                'clipped_ratio' => 0.0,
+                'noise_rms' => 0.006,
+                'speech_window_ratio' => 0.72,
+            ],
         ]);
 
         $response
@@ -138,12 +154,57 @@ class AiSpeechApiTest extends TestCase
             'attempt_cefr_level' => 'a1',
             'metadata->communication->intent_match' => 'full',
             'metadata->communication->went_off_script' => true,
+            'metadata->content_cefr_level' => 'a1',
+            'metadata->learner_cefr_level' => 'a2',
         ]);
+
+        $attempt = SpeakingAttempt::query()->where('transcript', 'Norėčiau staliuko dviem.')->firstOrFail();
+
+        $this->assertSame([
+            'duration_seconds' => 1.64,
+            'rms' => 0.031,
+            'peak' => 0.42,
+            'clipped_ratio' => 0,
+            'noise_rms' => 0.006,
+            'speech_window_ratio' => 0.72,
+        ], $attempt->metadata['audio_readiness']);
 
         Transcription::assertGenerated(fn ($prompt): bool => $prompt->language === 'lt');
         SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
             ->contains('Ask for a table')
-            && $prompt->contains('Judge whether the current communicative goal was answered'));
+            && $prompt->contains('Judge whether the current communicative goal was answered')
+            && $prompt->contains('Content CEFR level: a1')
+            && $prompt->contains('Current estimated learner CEFR level: a2')
+            && $prompt->contains('For Pre-A1/A1 content, prioritize clear communicative success'));
+    }
+
+    public function test_speech_check_validates_audio_readiness_metrics_when_present(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        $this->seed([CharacterSeeder::class, RestaurantScenarioSeeder::class]);
+
+        $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'restoranas',
+            'scene_id' => 'atvykimas',
+            'goal_id' => 'ask-table-two',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'Ask for a table for two people.',
+            'example' => 'Norėčiau staliuko dviem, prašau.',
+            'context' => 'At a Lithuanian restaurant.',
+            'audio_readiness' => [
+                'duration_seconds' => -1,
+                'rms' => 2,
+            ],
+        ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors([
+                'audio_readiness.duration_seconds',
+                'audio_readiness.rms',
+                'audio_readiness.peak',
+                'audio_readiness.clipped_ratio',
+                'audio_readiness.noise_rms',
+                'audio_readiness.speech_window_ratio',
+            ]);
     }
 
     public function test_fake_speech_check_returns_deterministic_feedback_without_provider_calls(): void
@@ -228,10 +289,83 @@ class AiSpeechApiTest extends TestCase
             'context' => 'At a cafe.',
         ])->assertOk();
 
-        SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt->contains('Evaluation mode: STRICT'));
+        SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
+            ->contains('Evaluation mode: STRICT')
+            && $prompt->contains('Be less forgiving within the same CEFR level'));
         $this->assertDatabaseHas('speaking_attempts', [
             'transcript' => 'Kavos, prašau.',
             'metadata->strict_speech_mode' => true,
+        ]);
+    }
+
+    public function test_speech_check_judges_against_higher_content_cefr_when_available(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+        LearnerLanguageLevel::query()->create([
+            'user_id' => $user->id,
+            'language_code' => 'lt',
+            'current_cefr_level' => 'a1',
+            'confidence_score' => 55,
+        ]);
+        Transcription::fake(['Negaliu šiandien, nes turiu susitikimą.']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'feedback' => 'That explains the reason clearly.',
+            'corrected' => 'Negaliu šiandien, nes turiu susitikimą.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'You gave a clear reason for rescheduling.',
+            'improvement_focus' => 'coherence',
+            'scores' => [
+                'grammar' => 78,
+                'vocabulary' => 76,
+                'cohesion' => 74,
+                'task_completion' => 86,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'b1',
+        ]]);
+        $this->seed(CharacterSeeder::class);
+
+        $scenario = Scenario::factory()->create([
+            'slug' => 'appointment',
+            'cefr_level' => 'b1',
+            'start_scene_slug' => 'reschedule',
+        ]);
+        $scene = Scene::factory()->for($scenario)->create([
+            'slug' => 'reschedule',
+            'cefr_level' => 'b1',
+        ]);
+        $goal = Goal::factory()->for($scene)->create([
+            'slug' => 'explain-reschedule',
+            'label' => 'Explain why you need to reschedule',
+            'intent' => 'The learner explains why they need to reschedule an appointment.',
+            'example' => 'Negaliu šiandien, nes turiu svarbų susitikimą. Ar galime susitikti rytoj?',
+            'cefr_level' => 'b1',
+        ]);
+        NpcLine::factory()->for($scene)->create(['trigger_goal_id' => null]);
+        NpcLine::factory()->for($scene)->create(['trigger_goal_id' => $goal->id]);
+
+        $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => $scenario->slug,
+            'scene_id' => $scene->slug,
+            'goal_id' => $goal->slug,
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => $goal->intent,
+            'example' => $goal->example,
+            'context' => 'Rescheduling an appointment.',
+        ])->assertOk();
+
+        SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
+            ->contains('Content CEFR level: b1')
+            && $prompt->contains('Current estimated learner CEFR level: a1')
+            && $prompt->contains('For B1 content, expect connected explanation'));
+        $this->assertDatabaseHas('speaking_attempts', [
+            'transcript' => 'Negaliu šiandien, nes turiu susitikimą.',
+            'metadata->content_cefr_level' => 'b1',
+            'metadata->learner_cefr_level' => 'a1',
         ]);
     }
 
@@ -380,7 +514,7 @@ class AiSpeechApiTest extends TestCase
         ]);
     }
 
-    public function test_dialogue_router_is_not_used_for_authored_goal_progression(): void
+    public function test_authored_goal_progression_uses_deterministic_dialogue(): void
     {
         Config::set('services.kalbek.ai_mode', 'live');
         Sanctum::actingAs(User::factory()->create());
@@ -398,8 +532,6 @@ class AiSpeechApiTest extends TestCase
             ],
             'attempt_cefr_level' => 'a1',
         ]]);
-        DialogueRouter::fake();
-
         $this->seed(CharacterSeeder::class);
 
         $scenario = Scenario::factory()->create([
@@ -440,6 +572,5 @@ class AiSpeechApiTest extends TestCase
             ->assertJsonPath('dialogue.should_complete', false)
             ->assertJsonPath('dialogue.reason', 'Advance by the selected authored goal.');
 
-        DialogueRouter::assertNeverPrompted();
     }
 }

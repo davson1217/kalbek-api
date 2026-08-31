@@ -7,6 +7,7 @@ use App\ContentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Character;
 use App\Models\Scenario;
+use App\Services\Content\AuditScenarioContent;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -38,7 +39,7 @@ class ScenarioController extends Controller
         return redirect()->route('cms.scenarios.show', $scenario)->with('success', 'Scenario created.');
     }
 
-    public function show(Scenario $scenario): Response
+    public function show(Scenario $scenario, AuditScenarioContent $auditor): Response
     {
         $scenario->load([
             'character',
@@ -50,6 +51,7 @@ class ScenarioController extends Controller
 
         return Inertia::render('Scenarios/Show', [
             'scenario' => $this->detail($scenario),
+            'auditIssues' => $auditor->issues($scenario, publishedOnly: false),
             'characters' => $this->characterOptions(),
             'statuses' => array_column(ContentStatus::cases(), 'value'),
             'levels' => array_column(CefrLevel::cases(), 'value'),

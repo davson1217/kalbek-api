@@ -30,6 +30,13 @@ class SpeechCheckRequest extends FormRequest
             'intent' => ['required', 'string', 'max:400'],
             'example' => ['nullable', 'string', 'max:400'],
             'context' => ['nullable', 'string', 'max:400'],
+            'audio_readiness' => ['nullable', 'array'],
+            'audio_readiness.duration_seconds' => ['required_with:audio_readiness', 'numeric', 'min:0', 'max:600'],
+            'audio_readiness.rms' => ['required_with:audio_readiness', 'numeric', 'min:0', 'max:1'],
+            'audio_readiness.peak' => ['required_with:audio_readiness', 'numeric', 'min:0', 'max:1'],
+            'audio_readiness.clipped_ratio' => ['required_with:audio_readiness', 'numeric', 'min:0', 'max:1'],
+            'audio_readiness.noise_rms' => ['required_with:audio_readiness', 'numeric', 'min:0', 'max:1'],
+            'audio_readiness.speech_window_ratio' => ['required_with:audio_readiness', 'numeric', 'min:0', 'max:1'],
         ];
     }
 }

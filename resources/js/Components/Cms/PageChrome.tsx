@@ -52,8 +52,9 @@ export function SecondaryButton({ children, icon: Icon, type = 'button', ...prop
     );
 }
 
-export function StatusBadge({ children, tone = 'slate' }: PropsWithChildren<{ tone?: 'cyan' | 'emerald' | 'rose' | 'slate' | 'violet' }>) {
+export function StatusBadge({ children, tone = 'slate' }: PropsWithChildren<{ tone?: 'amber' | 'cyan' | 'emerald' | 'rose' | 'slate' | 'violet' }>) {
     const tones = {
+        amber: 'bg-amber-50 text-amber-800 ring-amber-100',
         cyan: 'bg-cyan-50 text-cyan-800 ring-cyan-100',
         emerald: 'bg-emerald-50 text-emerald-800 ring-emerald-100',
         rose: 'bg-rose-50 text-rose-800 ring-rose-100',

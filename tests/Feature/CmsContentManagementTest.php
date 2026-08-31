@@ -104,6 +104,36 @@ class CmsContentManagementTest extends TestCase
         $this->assertSame(0, NpcLine::query()->where('scene_id', $firstScene->id)->where('lt', 'Taip.')->count());
     }
 
+    public function test_admin_can_see_scenario_flow_audit_issues(): void
+    {
+        $this->seed([CharacterSeeder::class, RestaurantScenarioSeeder::class]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $scenario = Scenario::query()->where('slug', 'restoranas')->firstOrFail();
+
+        $scene = Scene::factory()->for($scenario)->create([
+            'slug' => 'unfinished-scene',
+            'setting' => 'An unfinished teacher-authored scene.',
+        ]);
+
+        Goal::factory()->for($scene)->create([
+            'slug' => 'unfinished-goal',
+            'label' => 'Ask an unfinished question',
+            'intent' => 'The learner asks an unfinished question.',
+            'example' => 'Ar turite?',
+        ]);
+
+        $this->actingAs($admin)->get(route('cms.scenarios.show', $scenario))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Scenarios/Show')
+                ->where('auditIssues.0.severity', 'warning')
+                ->where('auditIssues.0.scene_slug', 'unfinished-scene')
+                ->where('auditIssues.0.message', 'Scene [restoranas/unfinished-scene] is not reachable from the start scene [atvykimas].')
+                ->where('auditIssues.1.severity', 'critical')
+                ->where('auditIssues.1.message', 'Scene [restoranas/unfinished-scene] has no opening/generic line.')
+                ->where('auditIssues.2.goal_slug', 'unfinished-goal'));
+    }
+
     public function test_grant_cms_access_command_promotes_existing_user(): void
     {
         $user = User::factory()->create(['email' => 'teacher@example.com', 'role' => 'learner']);

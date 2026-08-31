@@ -14,8 +14,15 @@ class SpeechEvaluator implements SpeechEvaluatorContract
     /**
      * @return array{transcript: string, pass: bool, feedback: string, corrected: string, suggestion: string, communication: array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
      */
-    public function evaluate(UploadedFile $audio, string $intent, string $example = '', string $context = '', bool $strict = false): array
-    {
+    public function evaluate(
+        UploadedFile $audio,
+        string $intent,
+        string $example = '',
+        string $context = '',
+        bool $strict = false,
+        string $contentCefrLevel = 'a1',
+        string $learnerCefrLevel = 'pre_a1',
+    ): array {
         $transcript = trim((string) Transcription::fromUpload($audio)
             ->language('lt')
             ->timeout(45)
@@ -50,12 +57,17 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         }
 
         $normalizedTranscript = $this->normalizeTranscriptForJudging($transcript);
+        $contentCefrLevel = $this->validCefrLevel($contentCefrLevel, CefrLevel::A1->value);
+        $learnerCefrLevel = $this->validCefrLevel($learnerCefrLevel, CefrLevel::PreA1->value);
         $verdict = $this->verdictArray(SpeakingJudge::make()->prompt(
             "Situation: {$context}\n"
             ."The learner must express: {$intent}\n"
             ."Model phrasing: {$example}\n"
+            ."Content CEFR level: {$contentCefrLevel}\n"
+            ."Current estimated learner CEFR level: {$learnerCefrLevel}\n"
+            ."Judge relative to the content CEFR level. Use the learner level only as background for encouraging feedback, not as a reason to fail a valid answer.\n"
             ."The learner may answer naturally and include extra social detail. Judge whether the current communicative goal was answered, not whether the exact model phrase was repeated.\n"
-            .'Evaluation mode: '.($strict ? 'STRICT. Fail answers that only loosely match the task, use mostly English, omit the required meaning, or contain grammar/vocabulary problems that make the role-play response unnatural. Require task_completion of at least 75 for pass.' : 'NORMAL. Be encouraging for beginners and pass understandable Lithuanian that satisfies the task, even with small grammar or case slips.')."\n"
+            .'Evaluation mode: '.$this->evaluationModeInstruction($strict, $contentCefrLevel)."\n"
             ."Raw speech transcript: \"{$transcript}\"\n"
             ."Normalized transcript for judging: \"{$normalizedTranscript}\"\n"
             .'Judge the spoken answer, not the transcript formatting.',
@@ -117,6 +129,29 @@ class SpeechEvaluator implements SpeechEvaluatorContract
             'note' => $this->speechFirstFeedback((string) ($verdict['communication_note'] ?? ($passed ? 'You answered the goal clearly.' : 'Your answer was related, but did not fully answer the goal.')), ''),
             'improvement_focus' => in_array($focus, ['grammar', 'vocabulary', 'pronunciation', 'coherence', 'task', 'none'], true) ? $focus : ($passed ? 'none' : 'task'),
         ];
+    }
+
+    private function evaluationModeInstruction(bool $strict, string $contentCefrLevel): string
+    {
+        $levelGuidance = match ($contentCefrLevel) {
+            'pre_a1', 'a1' => 'For Pre-A1/A1 content, prioritize clear communicative success, simple correct phrases, and basic vocabulary. Do not expect complex sentences.',
+            'a2' => 'For A2 content, expect simple connected phrases, basic tense control, and enough detail for the task.',
+            'b1' => 'For B1 content, expect connected explanation, relevant detail, and mostly controlled everyday grammar.',
+            'b2' => 'For B2 content, expect nuance, register control, cohesive reasoning, and a broader vocabulary range.',
+            'c1', 'c2' => 'For C-level content, expect precise expression, strong cohesion, idiomatic control, and register awareness.',
+            default => 'Judge against the provided content level and role-play goal.',
+        };
+
+        $mode = $strict
+            ? 'STRICT. Be less forgiving within the same CEFR level: fail loose matches, mostly English answers, omitted required meaning, or grammar/vocabulary problems that make the role-play response unnatural. Require task_completion of at least 75 for pass.'
+            : 'NORMAL. Pass understandable Lithuanian that satisfies the task at the content level, even with minor spoken grammar or phrasing slips.';
+
+        return $mode.' '.$levelGuidance;
+    }
+
+    private function validCefrLevel(string $level, string $fallback): string
+    {
+        return in_array($level, array_column(CefrLevel::cases(), 'value'), true) ? $level : $fallback;
     }
 
     private function score(mixed $value): int

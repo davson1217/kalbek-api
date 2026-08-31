@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\CefrLevel;
 use App\Contracts\DialogueOrchestratorContract;
 use App\Contracts\SpeechEvaluatorContract;
 use App\Http\Controllers\Controller;
@@ -41,12 +42,23 @@ class SpeechCheckController extends Controller
             ]);
         }
 
+        $contentCefrLevel = $goal->cefr_level?->value
+            ?? $scene->cefr_level?->value
+            ?? $scenario->cefr_level?->value
+            ?? CefrLevel::A1->value;
+        $learnerLanguageLevel = $user->languageLevels()
+            ->where('language_code', 'lt')
+            ->first();
+        $learnerCefrLevel = $learnerLanguageLevel?->current_cefr_level?->value ?? CefrLevel::PreA1->value;
+
         $result = $evaluator->evaluate(
             $data['audio'],
             $data['intent'],
             $data['example'] ?? '',
             $data['context'] ?? '',
             (bool) $user->strict_speech_mode,
+            $contentCefrLevel,
+            $learnerCefrLevel,
         );
 
         $scenario->loadMissing(['scenes.goals.nextScene', 'scenes.npcLines.triggerGoal']);
@@ -77,7 +89,9 @@ class SpeechCheckController extends Controller
                 'example' => $data['example'] ?? '',
                 'context' => $data['context'] ?? '',
                 'strict_speech_mode' => (bool) $user->strict_speech_mode,
-                'content_cefr_level' => $goal->cefr_level?->value ?? $scene->cefr_level?->value ?? $scenario->cefr_level?->value,
+                'content_cefr_level' => $contentCefrLevel,
+                'learner_cefr_level' => $learnerCefrLevel,
+                'audio_readiness' => $data['audio_readiness'] ?? null,
                 'communication' => $result['communication'],
                 'dialogue' => $dialogue,
             ],

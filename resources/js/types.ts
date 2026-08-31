@@ -51,6 +51,16 @@ export interface ScenarioDetail extends ScenarioSummary {
     scenes: SceneRecord[];
 }
 
+export interface ScenarioAuditIssue {
+    severity: 'critical' | 'warning';
+    scope: 'scenario' | 'scene' | 'goal' | 'line';
+    scenario_slug: string;
+    scene_slug?: string;
+    goal_slug?: string;
+    line_id?: number;
+    message: string;
+}
+
 export interface SceneRecord {
     id: number;
     slug: string;

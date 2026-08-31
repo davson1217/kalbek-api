@@ -1,9 +1,9 @@
-import { ChevronDown, Edit3, MessageCircle, Plus, Route, ShoppingBag } from 'lucide-react';
+import { AlertTriangle, ChevronDown, Edit3, MessageCircle, Plus, Route, ShoppingBag } from 'lucide-react';
 import { useState } from 'react';
 
 import { Modal } from '../Modal';
 import { PrimaryButton, SecondaryButton, StatusBadge } from '../PageChrome';
-import type { GoalRecord, NpcLineRecord, ScenarioDetail, ScenePropRecord, SceneRecord } from '../../../types';
+import type { GoalRecord, NpcLineRecord, ScenarioAuditIssue, ScenarioDetail, ScenePropRecord, SceneRecord } from '../../../types';
 import { DeleteButton, GoalForm, LineForm, PropForm, SceneForm } from './ContentForms';
 
 type ModalState =
@@ -16,12 +16,14 @@ type ModalState =
     | { prop: ScenePropRecord; type: 'edit-prop' }
     | null;
 
-export function ScenePanel({ goalOptions, levels, scenario, scene, sceneOptions }: { goalOptions: Array<{ value: number; label: string }>; levels: string[]; scenario: ScenarioDetail; scene: SceneRecord; sceneOptions: Array<{ value: number; label: string }> }) {
+export function ScenePanel({ auditIssues, goalOptions, levels, scenario, scene, sceneOptions }: { auditIssues: ScenarioAuditIssue[]; goalOptions: Array<{ value: number; label: string }>; levels: string[]; scenario: ScenarioDetail; scene: SceneRecord; sceneOptions: Array<{ value: number; label: string }> }) {
     const [open, setOpen] = useState(false);
     const [modal, setModal] = useState<ModalState>(null);
     const closeModal = () => setModal(null);
     const sceneGoalOptions = scene.goals.map((goal) => ({ value: goal.id, label: goal.slug }));
     const genericLines = scene.lines.filter((line) => !line.trigger_goal_db_id);
+    const criticalIssueCount = auditIssues.filter((issue) => issue.severity === 'critical').length;
+    const warningIssueCount = auditIssues.filter((issue) => issue.severity === 'warning').length;
 
     return (
         <section className="overflow-hidden rounded-3xl border border-white/80 bg-white/85 shadow-xl shadow-slate-200/60 backdrop-blur transition hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-slate-200">
@@ -32,6 +34,8 @@ export function ScenePanel({ goalOptions, levels, scenario, scene, sceneOptions 
                         <StatusBadge tone="cyan">{scene.cefr_level?.toUpperCase() ?? 'INHERIT'}</StatusBadge>
                         <StatusBadge>{scene.goals.length} goals</StatusBadge>
                         <StatusBadge>{scene.lines.length} lines</StatusBadge>
+                        {criticalIssueCount > 0 ? <StatusBadge tone="rose">{criticalIssueCount} critical</StatusBadge> : null}
+                        {warningIssueCount > 0 ? <StatusBadge tone="amber">{warningIssueCount} warnings</StatusBadge> : null}
                     </div>
                     <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{scene.setting || 'No setting has been written yet.'}</p>
                 </div>
@@ -40,6 +44,8 @@ export function ScenePanel({ goalOptions, levels, scenario, scene, sceneOptions 
 
             {open ? (
                 <div className="border-t border-slate-100 px-5 pb-5 animate-in fade-in slide-in-from-top-2 duration-200">
+                    {auditIssues.length > 0 ? <SceneIssueList issues={auditIssues} /> : null}
+
                     <div className="mt-4 flex flex-wrap gap-2">
                         <SecondaryButton icon={Edit3} onClick={() => setModal({ type: 'edit-scene' })}>Edit scene</SecondaryButton>
                         <PrimaryButton icon={Plus} onClick={() => setModal({ type: 'create-goal' })}>Add goal</PrimaryButton>
@@ -109,6 +115,25 @@ export function ScenePanel({ goalOptions, levels, scenario, scene, sceneOptions 
 
             <SceneModals modal={modal} closeModal={closeModal} goalOptions={sceneGoalOptions.length > 0 ? sceneGoalOptions : goalOptions} levels={levels} scenario={scenario} scene={scene} sceneOptions={sceneOptions} />
         </section>
+    );
+}
+
+function SceneIssueList({ issues }: { issues: ScenarioAuditIssue[] }) {
+    return (
+        <div className="mt-4 rounded-3xl border border-amber-100 bg-amber-50/80 p-4">
+            <h3 className="flex items-center gap-2 text-sm font-black text-amber-950"><AlertTriangle className="size-4 text-amber-700" /> Flow QA for this scene</h3>
+            <div className="mt-3 space-y-2">
+                {issues.map((issue, index) => (
+                    <div key={`${issue.message}-${index}`} className="rounded-2xl border border-white/80 bg-white/80 px-3 py-2 text-sm leading-6 text-slate-700">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <StatusBadge tone={issue.severity === 'critical' ? 'rose' : 'amber'}>{issue.severity}</StatusBadge>
+                            {issue.goal_slug ? <StatusBadge>{issue.goal_slug}</StatusBadge> : null}
+                        </div>
+                        <p className="mt-2">{issue.message}</p>
+                    </div>
+                ))}
+            </div>
+        </div>
     );
 }
 
