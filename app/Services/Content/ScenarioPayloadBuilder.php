@@ -11,11 +11,12 @@ class ScenarioPayloadBuilder
     /**
      * @return Collection<int, Scenario>
      */
-    public function publishedSummaries(): Collection
+    public function publishedSummaries(?string $languageCode = null): Collection
     {
         return Scenario::query()
             ->published()
-            ->with('character')
+            ->when($languageCode, fn ($query) => $query->whereHas('language', fn ($language) => $language->where('code', $languageCode)))
+            ->with(['character', 'language'])
             ->orderBy('sort_order')
             ->orderBy('title')
             ->get();
@@ -27,6 +28,7 @@ class ScenarioPayloadBuilder
 
         return $scenario->loadMissing([
             'character',
+            'language',
             'scenes.npcLines.triggerGoal',
             'scenes.goals.nextScene',
             'scenes.props',

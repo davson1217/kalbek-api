@@ -6,6 +6,7 @@ use App\CefrLevel;
 use App\ContentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Character;
+use App\Models\Language;
 use App\Models\Scenario;
 use App\Services\Content\AuditScenarioContent;
 use Illuminate\Http\RedirectResponse;
@@ -20,13 +21,14 @@ class ScenarioController extends Controller
     {
         return Inertia::render('Scenarios/Index', [
             'scenarios' => Scenario::query()
-                ->with('character')
+                ->with(['character', 'language'])
                 ->withCount('scenes')
                 ->orderBy('sort_order')
                 ->orderBy('title')
                 ->get()
                 ->map(fn (Scenario $scenario): array => $this->summary($scenario)),
             'characters' => $this->characterOptions(),
+            'languages' => $this->languageOptions(),
             'statuses' => array_column(ContentStatus::cases(), 'value'),
             'levels' => array_column(CefrLevel::cases(), 'value'),
         ]);
@@ -43,6 +45,7 @@ class ScenarioController extends Controller
     {
         $scenario->load([
             'character',
+            'language',
             'scenes.npcLines.triggerGoal',
             'scenes.goals.nextScene',
             'scenes.goals.responseLines.triggerGoal',
@@ -53,6 +56,7 @@ class ScenarioController extends Controller
             'scenario' => $this->detail($scenario),
             'auditIssues' => $auditor->issues($scenario, publishedOnly: false),
             'characters' => $this->characterOptions(),
+            'languages' => $this->languageOptions(),
             'statuses' => array_column(ContentStatus::cases(), 'value'),
             'levels' => array_column(CefrLevel::cases(), 'value'),
         ]);
@@ -68,13 +72,14 @@ class ScenarioController extends Controller
     private function validated(Request $request, ?Scenario $scenario = null): array
     {
         return $request->validate([
+            'language_id' => ['required', 'integer', 'exists:languages,id'],
             'character_id' => ['required', 'integer', 'exists:characters,id'],
             'slug' => ['required', 'string', 'max:100', Rule::unique('scenarios', 'slug')->ignore($scenario)],
             'title' => ['required', 'string', 'max:160'],
             'subtitle' => ['required', 'string', 'max:160'],
             'description' => ['required', 'string', 'max:1000'],
             'emoji' => ['required', 'string', 'max:20'],
-            'tone' => ['required', Rule::in(['primary', 'amber', 'berry', 'sky'])],
+            'tone' => ['required', Rule::in(['primary', 'amber', 'berry', 'sky', 'mint'])],
             'cefr_level' => ['nullable', Rule::enum(CefrLevel::class)],
             'start_scene_slug' => ['nullable', 'string', 'max:100'],
             'status' => ['required', Rule::enum(ContentStatus::class)],
@@ -96,6 +101,13 @@ class ScenarioController extends Controller
             'start_scene_slug' => $scenario->start_scene_slug,
             'status' => $scenario->status->value,
             'sort_order' => $scenario->sort_order,
+            'language_id' => $scenario->language_id,
+            'language' => $scenario->language ? [
+                'id' => $scenario->language->id,
+                'code' => $scenario->language->code,
+                'name' => $scenario->language->name,
+                'native_name' => $scenario->language->native_name,
+            ] : null,
             'character_id' => $scenario->character_id,
             'character' => $scenario->character?->name,
             'scenes_count' => $scenario->scenes_count ?? null,
@@ -115,8 +127,8 @@ class ScenarioController extends Controller
                 'sort_order' => $scene->sort_order,
                 'lines' => $scene->npcLines->map(fn ($line): array => [
                     'id' => $line->id,
-                    'lt' => $line->lt,
-                    'en' => $line->en,
+                    'target_text' => $line->target_text,
+                    'support_translation' => $line->support_translation,
                     'cefr_level' => $line->cefr_level?->value,
                     'trigger_goal_id' => $line->triggerGoal?->slug,
                     'trigger_goal_db_id' => $line->trigger_goal_id,
@@ -135,8 +147,8 @@ class ScenarioController extends Controller
                     'sort_order' => $goal->sort_order,
                     'response_lines' => $goal->responseLines->map(fn ($line): array => [
                         'id' => $line->id,
-                        'lt' => $line->lt,
-                        'en' => $line->en,
+                        'target_text' => $line->target_text,
+                        'support_translation' => $line->support_translation,
                         'cefr_level' => $line->cefr_level?->value,
                         'trigger_goal_id' => $line->triggerGoal?->slug,
                         'trigger_goal_db_id' => $line->trigger_goal_id,
@@ -147,8 +159,8 @@ class ScenarioController extends Controller
                 'props' => $scene->props->map(fn ($prop): array => [
                     'id' => $prop->id,
                     'type' => $prop->type,
-                    'lt' => $prop->lt,
-                    'en' => $prop->en,
+                    'target_text' => $prop->target_text,
+                    'support_translation' => $prop->support_translation,
                     'price' => $prop->price,
                     'metadata' => $prop->metadata,
                     'sort_order' => $prop->sort_order,
@@ -162,11 +174,30 @@ class ScenarioController extends Controller
         return Character::query()
             ->orderBy('sort_order')
             ->orderBy('name')
-            ->get(['id', 'name', 'slug'])
+            ->get(['id', 'language_id', 'name', 'slug'])
             ->map(fn (Character $character): array => [
                 'id' => $character->id,
+                'language_id' => $character->language_id,
                 'name' => $character->name,
                 'slug' => $character->slug,
+            ])
+            ->all();
+    }
+
+    private function languageOptions(): array
+    {
+        return Language::query()
+            ->where('status', 'active')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'code', 'name', 'native_name', 'support_language_code', 'support_language_name'])
+            ->map(fn (Language $language): array => [
+                'id' => $language->id,
+                'code' => $language->code,
+                'name' => $language->name,
+                'native_name' => $language->native_name,
+                'support_language_code' => $language->support_language_code,
+                'support_language_name' => $language->support_language_name,
             ])
             ->all();
     }

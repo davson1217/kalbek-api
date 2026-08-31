@@ -9,17 +9,18 @@ import { ScenarioForm } from '../../Components/Cms/Scenarios/ScenarioForm';
 import { ScenarioPreview } from '../../Components/Cms/Scenarios/ScenarioPreview';
 import { ScenePanel } from '../../Components/Cms/Scenarios/ScenePanel';
 import { CmsLayout } from '../../Layouts/CmsLayout';
-import type { CharacterOption, ScenarioAuditIssue, ScenarioDetail } from '../../types';
+import type { CharacterOption, LanguageOption, ScenarioAuditIssue, ScenarioDetail } from '../../types';
 
 interface Props {
     scenario: ScenarioDetail;
     auditIssues: ScenarioAuditIssue[];
     characters: CharacterOption[];
+    languages: LanguageOption[];
     statuses: string[];
     levels: string[];
 }
 
-export default function ScenarioShow({ scenario, auditIssues, characters, statuses, levels }: Props) {
+export default function ScenarioShow({ scenario, auditIssues, characters, languages, statuses, levels }: Props) {
     const [editingScenario, setEditingScenario] = useState(false);
     const [creatingScene, setCreatingScene] = useState(false);
     const sceneOptions = scenario.scenes.map((scene) => ({ value: scene.id, label: scene.slug }));
@@ -47,6 +48,7 @@ export default function ScenarioShow({ scenario, auditIssues, characters, status
                     <div className="flex flex-wrap gap-2 pt-1">
                         <StatusBadge tone="cyan">{scenario.cefr_level?.toUpperCase() ?? 'UNSET'}</StatusBadge>
                         <StatusBadge tone="emerald">{scenario.status}</StatusBadge>
+                        <StatusBadge>{scenario.language ? `${scenario.language.name} (${scenario.language.code})` : 'No language'}</StatusBadge>
                         <StatusBadge>{scenario.character ?? 'No character'}</StatusBadge>
                         <StatusBadge>{scenario.scenes.length} scenes</StatusBadge>
                     </div>
@@ -87,7 +89,7 @@ export default function ScenarioShow({ scenario, auditIssues, characters, status
             </div>
 
             <Modal open={editingScenario} title="Edit scenario" onClose={() => setEditingScenario(false)}>
-                <ScenarioForm action={`/cms/scenarios/${scenario.slug}`} method="put" scenario={scenario} characters={characters} statuses={statuses} levels={levels} onSuccess={() => setEditingScenario(false)} />
+                <ScenarioForm action={`/cms/scenarios/${scenario.slug}`} method="put" scenario={scenario} characters={characters} languages={languages} statuses={statuses} levels={levels} onSuccess={() => setEditingScenario(false)} />
             </Modal>
 
             <Modal open={creatingScene} title="Create scene" description="Scenes are the steps in a speaking scenario." onClose={() => setCreatingScene(false)}>

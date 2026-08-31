@@ -5,6 +5,7 @@ use App\Http\Controllers\Cms\AuthSessionController;
 use App\Http\Controllers\Cms\CharacterController;
 use App\Http\Controllers\Cms\DashboardController;
 use App\Http\Controllers\Cms\GoalController;
+use App\Http\Controllers\Cms\LanguageController;
 use App\Http\Controllers\Cms\NpcLineController;
 use App\Http\Controllers\Cms\ScenarioController;
 use App\Http\Controllers\Cms\SceneController;
@@ -26,6 +27,7 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
     Route::middleware(['auth', 'cms'])->group(function (): void {
         Route::post('/logout', [AuthSessionController::class, 'destroy'])->name('logout');
         Route::get('/', DashboardController::class)->name('dashboard');
+        Route::resource('languages', LanguageController::class)->only(['index', 'store', 'update']);
         Route::resource('characters', CharacterController::class)->only(['index', 'store', 'update']);
         Route::resource('scenarios', ScenarioController::class)->only(['index', 'store', 'show', 'update']);
         Route::post('scenarios/{scenario}/scenes', [SceneController::class, 'store'])->name('scenarios.scenes.store');

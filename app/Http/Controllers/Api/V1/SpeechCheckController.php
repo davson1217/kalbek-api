@@ -22,7 +22,7 @@ class SpeechCheckController extends Controller
         $data = $request->validated();
         /** @var User $user */
         $user = $request->user();
-        $scenario = Scenario::query()->where('slug', $data['scenario_id'])->firstOrFail();
+        $scenario = Scenario::query()->with('language')->where('slug', $data['scenario_id'])->firstOrFail();
         $scene = $scenario->scenes()->where('slug', $data['scene_id'])->first();
 
         if (! $scene) {
@@ -42,12 +42,14 @@ class SpeechCheckController extends Controller
             ]);
         }
 
+        $targetLanguageCode = $scenario->language?->code ?? 'lt';
+        $targetLanguageName = $scenario->language?->name ?? 'Lithuanian';
         $contentCefrLevel = $goal->cefr_level?->value
             ?? $scene->cefr_level?->value
             ?? $scenario->cefr_level?->value
             ?? CefrLevel::A1->value;
         $learnerLanguageLevel = $user->languageLevels()
-            ->where('language_code', 'lt')
+            ->where('language_code', $targetLanguageCode)
             ->first();
         $learnerCefrLevel = $learnerLanguageLevel?->current_cefr_level?->value ?? CefrLevel::PreA1->value;
 
@@ -59,6 +61,8 @@ class SpeechCheckController extends Controller
             (bool) $user->strict_speech_mode,
             $contentCefrLevel,
             $learnerCefrLevel,
+            $targetLanguageCode,
+            $targetLanguageName,
         );
 
         $scenario->loadMissing(['scenes.goals.nextScene', 'scenes.npcLines.triggerGoal']);
@@ -91,6 +95,8 @@ class SpeechCheckController extends Controller
                 'strict_speech_mode' => (bool) $user->strict_speech_mode,
                 'content_cefr_level' => $contentCefrLevel,
                 'learner_cefr_level' => $learnerCefrLevel,
+                'target_language_code' => $targetLanguageCode,
+                'target_language_name' => $targetLanguageName,
                 'audio_readiness' => $data['audio_readiness'] ?? null,
                 'communication' => $result['communication'],
                 'dialogue' => $dialogue,

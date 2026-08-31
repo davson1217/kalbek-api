@@ -1,11 +1,12 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { BookOpen, LayoutDashboard, LogOut, Sparkles, UsersRound } from 'lucide-react';
+import { BookOpen, Globe2, LayoutDashboard, LogOut, Sparkles, UsersRound } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 
 import type { SharedProps } from '../types';
 
 const nav = [
     { href: '/cms', label: 'Dashboard', icon: LayoutDashboard },
+    { href: '/cms/languages', label: 'Languages', icon: Globe2 },
     { href: '/cms/scenarios', label: 'Scenarios', icon: BookOpen },
     { href: '/cms/characters', label: 'Characters', icon: UsersRound },
 ];

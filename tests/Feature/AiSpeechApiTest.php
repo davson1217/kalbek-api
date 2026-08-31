@@ -483,8 +483,8 @@ class AiSpeechApiTest extends TestCase
         ]);
         NpcLine::factory()->for($greeting)->create([
             'trigger_goal_id' => $sayHello->id,
-            'lt' => 'Sveiki. Kas jums yra?',
-            'en' => 'Hello. What is wrong?',
+            'target_text' => 'Sveiki. Kas jums yra?',
+            'support_translation' => 'Hello. What is wrong?',
             'priority' => 100,
         ]);
 
@@ -549,8 +549,8 @@ class AiSpeechApiTest extends TestCase
         ]);
         NpcLine::factory()->for($medicine)->create([
             'trigger_goal_id' => $askPrice->id,
-            'lt' => 'Šis vaistas kainuoja šešis eurus.',
-            'en' => 'This medicine costs six euros.',
+            'target_text' => 'Šis vaistas kainuoja šešis eurus.',
+            'support_translation' => 'This medicine costs six euros.',
             'priority' => 100,
         ]);
 

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Cms;
 use App\ContentStatus;
 use App\Http\Controllers\Controller;
 use App\Models\Character;
+use App\Models\Language;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -17,12 +18,20 @@ class CharacterController extends Controller
     {
         return Inertia::render('Characters/Index', [
             'characters' => Character::query()
+                ->with('language')
                 ->withCount('scenarios')
                 ->orderBy('sort_order')
                 ->orderBy('name')
                 ->get()
                 ->map(fn (Character $character): array => [
                     'id' => $character->id,
+                    'language_id' => $character->language_id,
+                    'language' => $character->language ? [
+                        'id' => $character->language->id,
+                        'code' => $character->language->code,
+                        'name' => $character->language->name,
+                        'native_name' => $character->language->native_name,
+                    ] : null,
                     'slug' => $character->slug,
                     'name' => $character->name,
                     'role' => $character->role,
@@ -35,6 +44,7 @@ class CharacterController extends Controller
                     'scenarios_count' => $character->scenarios_count,
                 ]),
             'statuses' => array_column(ContentStatus::cases(), 'value'),
+            'languages' => $this->languageOptions(),
         ]);
     }
 
@@ -55,6 +65,7 @@ class CharacterController extends Controller
     private function validated(Request $request, ?Character $character = null): array
     {
         $data = $request->validate([
+            'language_id' => ['required', 'integer', 'exists:languages,id'],
             'slug' => ['required', 'string', 'max:80', Rule::unique('characters', 'slug')->ignore($character)],
             'name' => ['required', 'string', 'max:120'],
             'role' => ['required', 'string', 'max:120'],
@@ -78,6 +89,24 @@ class CharacterController extends Controller
             ->map(fn (string $line): string => trim($line))
             ->filter()
             ->values()
+            ->all();
+    }
+
+    private function languageOptions(): array
+    {
+        return Language::query()
+            ->where('status', 'active')
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['id', 'code', 'name', 'native_name', 'support_language_code', 'support_language_name'])
+            ->map(fn (Language $language): array => [
+                'id' => $language->id,
+                'code' => $language->code,
+                'name' => $language->name,
+                'native_name' => $language->native_name,
+                'support_language_code' => $language->support_language_code,
+                'support_language_name' => $language->support_language_name,
+            ])
             ->all();
     }
 }

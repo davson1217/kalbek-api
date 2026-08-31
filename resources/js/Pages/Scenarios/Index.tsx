@@ -6,16 +6,17 @@ import { Modal } from '../../Components/Cms/Modal';
 import { Breadcrumbs, PageHeader, PrimaryButton, SecondaryButton, StatusBadge } from '../../Components/Cms/PageChrome';
 import { ScenarioForm } from '../../Components/Cms/Scenarios/ScenarioForm';
 import { CmsLayout } from '../../Layouts/CmsLayout';
-import type { CharacterOption, ScenarioSummary } from '../../types';
+import type { CharacterOption, LanguageOption, ScenarioSummary } from '../../types';
 
 interface Props {
     scenarios: ScenarioSummary[];
     characters: CharacterOption[];
+    languages: LanguageOption[];
     statuses: string[];
     levels: string[];
 }
 
-export default function ScenariosIndex({ scenarios, characters, statuses, levels }: Props) {
+export default function ScenariosIndex({ scenarios, characters, languages, statuses, levels }: Props) {
     const [query, setQuery] = useState('');
     const [editing, setEditing] = useState<ScenarioSummary | null>(null);
     const [creating, setCreating] = useState(false);
@@ -25,7 +26,7 @@ export default function ScenariosIndex({ scenarios, characters, statuses, levels
 
         if (!needle) return scenarios;
 
-        return scenarios.filter((scenario) => [scenario.title, scenario.slug, scenario.character, scenario.status].some((value) => value?.toLowerCase().includes(needle)));
+        return scenarios.filter((scenario) => [scenario.title, scenario.slug, scenario.character, scenario.language?.name, scenario.language?.native_name, scenario.language?.code, scenario.status].some((value) => value?.toLowerCase().includes(needle)));
     }, [query, scenarios]);
 
     return (
@@ -64,8 +65,9 @@ export default function ScenariosIndex({ scenarios, characters, statuses, levels
                                 <tr>
                                     <th className="px-4 py-3">Scenario</th>
                                     <th className="hidden px-4 py-3 md:table-cell">Character</th>
+                                    <th className="hidden px-4 py-3 lg:table-cell">Language</th>
                                     <th className="px-4 py-3">Level</th>
-                                    <th className="hidden px-4 py-3 lg:table-cell">Scenes</th>
+                                    <th className="hidden px-4 py-3 xl:table-cell">Scenes</th>
                                     <th className="px-4 py-3 text-right">Actions</th>
                                 </tr>
                             </thead>
@@ -82,8 +84,9 @@ export default function ScenariosIndex({ scenarios, characters, statuses, levels
                                             </Link>
                                         </td>
                                         <td className="hidden px-4 py-4 text-slate-600 md:table-cell">{scenario.character ?? 'No character'}</td>
+                                        <td className="hidden px-4 py-4 text-slate-600 lg:table-cell">{scenario.language ? `${scenario.language.name} (${scenario.language.code})` : 'No language'}</td>
                                         <td className="px-4 py-4"><StatusBadge tone="cyan">{scenario.cefr_level?.toUpperCase() ?? 'UNSET'}</StatusBadge></td>
-                                        <td className="hidden px-4 py-4 lg:table-cell"><StatusBadge>{scenario.scenes_count ?? 0} scenes</StatusBadge></td>
+                                        <td className="hidden px-4 py-4 xl:table-cell"><StatusBadge>{scenario.scenes_count ?? 0} scenes</StatusBadge></td>
                                         <td className="px-4 py-4 text-right">
                                             <SecondaryButton icon={Edit3} onClick={() => setEditing(scenario)}>Edit</SecondaryButton>
                                         </td>
@@ -96,11 +99,11 @@ export default function ScenariosIndex({ scenarios, characters, statuses, levels
             </div>
 
             <Modal open={creating} title="Create scenario" description="Start with the scenario shell. Scenes and lines can be added after." onClose={() => setCreating(false)}>
-                <ScenarioForm action="/cms/scenarios" characters={characters} statuses={statuses} levels={levels} onSuccess={() => setCreating(false)} />
+                <ScenarioForm action="/cms/scenarios" characters={characters} languages={languages} statuses={statuses} levels={levels} onSuccess={() => setCreating(false)} />
             </Modal>
 
             <Modal open={Boolean(editing)} title="Edit scenario" onClose={() => setEditing(null)}>
-                {editing ? <ScenarioForm action={`/cms/scenarios/${editing.slug}`} method="put" scenario={editing} characters={characters} statuses={statuses} levels={levels} onSuccess={() => setEditing(null)} /> : null}
+                {editing ? <ScenarioForm action={`/cms/scenarios/${editing.slug}`} method="put" scenario={editing} characters={characters} languages={languages} statuses={statuses} levels={levels} onSuccess={() => setEditing(null)} /> : null}
             </Modal>
         </CmsLayout>
     );

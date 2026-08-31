@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\ContentStatus;
 use App\Models\Character;
 use App\Models\Goal;
+use App\Models\Language;
 use App\Models\Scenario;
 use App\Models\Scene;
 use Illuminate\Database\Eloquent\Collection;
@@ -16,11 +17,13 @@ class PharmacyVisitScenarioSeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function (): void {
+            $lithuanian = Language::query()->where('code', 'lt')->firstOrFail();
             $character = Character::query()->where('slug', 'rasa')->firstOrFail();
 
             $scenario = Scenario::query()->updateOrCreate(
                 ['slug' => 'pharmacy-visit'],
                 [
+                    'language_id' => $lithuanian->id,
                     'character_id' => $character->id,
                     'title' => 'Vaistinėje',
                     'subtitle' => 'At the pharmacy',
@@ -101,8 +104,8 @@ class PharmacyVisitScenarioSeeder extends Seeder
             foreach ($sceneData['lines'] as $index => $line) {
                 $scene->npcLines()->create([
                     'trigger_goal_id' => isset($line['trigger_goal']) ? $goals->get($line['trigger_goal'])?->id : null,
-                    'lt' => $line['lt'],
-                    'en' => $line['en'],
+                    'target_text' => $line['target_text'],
+                    'support_translation' => $line['support_translation'],
                     'cefr_level' => 'a1',
                     'priority' => $line['priority'] ?? 0,
                     'sort_order' => ($index + 1) * 10,
@@ -112,8 +115,8 @@ class PharmacyVisitScenarioSeeder extends Seeder
             foreach ($sceneData['props'] ?? [] as $index => $prop) {
                 $scene->props()->create([
                     'type' => 'menu_item',
-                    'lt' => $prop['lt'],
-                    'en' => $prop['en'],
+                    'target_text' => $prop['target_text'],
+                    'support_translation' => $prop['support_translation'],
                     'price' => $prop['price'],
                     'sort_order' => ($index + 1) * 10,
                 ]);
@@ -124,9 +127,9 @@ class PharmacyVisitScenarioSeeder extends Seeder
     private function scenes(): array
     {
         $medicine = [
-            ['lt' => 'Tabletės nuo galvos skausmo', 'en' => 'Headache tablets', 'price' => '6,00 €'],
-            ['lt' => 'Pastilės gerklei', 'en' => 'Throat lozenges', 'price' => '4,50 €'],
-            ['lt' => 'Vitaminas C', 'en' => 'Vitamin C', 'price' => '5,00 €'],
+            ['target_text' => 'Tabletės nuo galvos skausmo', 'support_translation' => 'Headache tablets', 'price' => '6,00 €'],
+            ['target_text' => 'Pastilės gerklei', 'support_translation' => 'Throat lozenges', 'price' => '4,50 €'],
+            ['target_text' => 'Vitaminas C', 'support_translation' => 'Vitamin C', 'price' => '5,00 €'],
         ];
 
         return [
@@ -134,13 +137,13 @@ class PharmacyVisitScenarioSeeder extends Seeder
                 'slug' => 'greeting',
                 'setting' => 'The learner enters a pharmacy. Rasa is behind the counter.',
                 'lines' => [
-                    ['lt' => 'Laba diena. Kuo galiu jums padėti?', 'en' => 'Good day. How can I help you?'],
-                    ['lt' => 'Sveiki. Ko ieškote?', 'en' => 'Hello. What are you looking for?'],
-                    ['lt' => 'Laba diena. Prašom, klausau jūsų.', 'en' => 'Good day. Please, I am listening.'],
-                    ['lt' => 'Žinoma. Kas jums yra?', 'en' => 'Of course. What is the matter?', 'trigger_goal' => 'ask-for-help', 'priority' => 100],
-                    ['lt' => 'Gerai. Kaip galiu padėti?', 'en' => 'Alright. How can I help?', 'trigger_goal' => 'ask-for-help', 'priority' => 100],
-                    ['lt' => 'Laba diena. Kaip jaučiatės?', 'en' => 'Good day. How do you feel?', 'trigger_goal' => 'say-hello', 'priority' => 100],
-                    ['lt' => 'Sveiki. Kas atsitiko?', 'en' => 'Hello. What happened?', 'trigger_goal' => 'say-hello', 'priority' => 100],
+                    ['target_text' => 'Laba diena. Kuo galiu jums padėti?', 'support_translation' => 'Good day. How can I help you?'],
+                    ['target_text' => 'Sveiki. Ko ieškote?', 'support_translation' => 'Hello. What are you looking for?'],
+                    ['target_text' => 'Laba diena. Prašom, klausau jūsų.', 'support_translation' => 'Good day. Please, I am listening.'],
+                    ['target_text' => 'Žinoma. Kas jums yra?', 'support_translation' => 'Of course. What is the matter?', 'trigger_goal' => 'ask-for-help', 'priority' => 100],
+                    ['target_text' => 'Gerai. Kaip galiu padėti?', 'support_translation' => 'Alright. How can I help?', 'trigger_goal' => 'ask-for-help', 'priority' => 100],
+                    ['target_text' => 'Laba diena. Kaip jaučiatės?', 'support_translation' => 'Good day. How do you feel?', 'trigger_goal' => 'say-hello', 'priority' => 100],
+                    ['target_text' => 'Sveiki. Kas atsitiko?', 'support_translation' => 'Hello. What happened?', 'trigger_goal' => 'say-hello', 'priority' => 100],
                 ],
                 'goals' => [
                     ['slug' => 'ask-for-help', 'label' => 'Ask for help', 'intent' => 'The learner greets the pharmacist and says they need help.', 'example' => 'Laba diena. Man reikia pagalbos.', 'next' => 'symptoms'],
@@ -151,15 +154,15 @@ class PharmacyVisitScenarioSeeder extends Seeder
                 'slug' => 'symptoms',
                 'setting' => 'Rasa asks what is wrong.',
                 'lines' => [
-                    ['lt' => 'Kas jums yra?', 'en' => 'What is the matter?'],
-                    ['lt' => 'Ką jums skauda?', 'en' => 'What hurts?'],
-                    ['lt' => 'Prašau pasakyti, kaip jaučiatės.', 'en' => 'Please say how you feel.'],
-                    ['lt' => 'Suprantu. Rekomenduoju tabletes nuo galvos skausmo.', 'en' => 'I understand. I recommend headache tablets.', 'trigger_goal' => 'headache', 'priority' => 100],
-                    ['lt' => 'Gerai. Nuo galvos skausmo tinka šios tabletės.', 'en' => 'Alright. These tablets are good for a headache.', 'trigger_goal' => 'headache', 'priority' => 100],
-                    ['lt' => 'Suprantu. Rekomenduoju pastiles gerklei.', 'en' => 'I understand. I recommend throat lozenges.', 'trigger_goal' => 'sore-throat', 'priority' => 100],
-                    ['lt' => 'Gerai. Šios pastilės yra gerklei.', 'en' => 'Alright. These lozenges are for the throat.', 'trigger_goal' => 'sore-throat', 'priority' => 100],
-                    ['lt' => 'Gerai. Rekomenduoju vitaminą C.', 'en' => 'Alright. I recommend vitamin C.', 'trigger_goal' => 'cold', 'priority' => 100],
-                    ['lt' => 'Suprantu. Galite vartoti vitaminą C.', 'en' => 'I understand. You can take vitamin C.', 'trigger_goal' => 'cold', 'priority' => 100],
+                    ['target_text' => 'Kas jums yra?', 'support_translation' => 'What is the matter?'],
+                    ['target_text' => 'Ką jums skauda?', 'support_translation' => 'What hurts?'],
+                    ['target_text' => 'Prašau pasakyti, kaip jaučiatės.', 'support_translation' => 'Please say how you feel.'],
+                    ['target_text' => 'Suprantu. Rekomenduoju tabletes nuo galvos skausmo.', 'support_translation' => 'I understand. I recommend headache tablets.', 'trigger_goal' => 'headache', 'priority' => 100],
+                    ['target_text' => 'Gerai. Nuo galvos skausmo tinka šios tabletės.', 'support_translation' => 'Alright. These tablets are good for a headache.', 'trigger_goal' => 'headache', 'priority' => 100],
+                    ['target_text' => 'Suprantu. Rekomenduoju pastiles gerklei.', 'support_translation' => 'I understand. I recommend throat lozenges.', 'trigger_goal' => 'sore-throat', 'priority' => 100],
+                    ['target_text' => 'Gerai. Šios pastilės yra gerklei.', 'support_translation' => 'Alright. These lozenges are for the throat.', 'trigger_goal' => 'sore-throat', 'priority' => 100],
+                    ['target_text' => 'Gerai. Rekomenduoju vitaminą C.', 'support_translation' => 'Alright. I recommend vitamin C.', 'trigger_goal' => 'cold', 'priority' => 100],
+                    ['target_text' => 'Suprantu. Galite vartoti vitaminą C.', 'support_translation' => 'I understand. You can take vitamin C.', 'trigger_goal' => 'cold', 'priority' => 100],
                 ],
                 'goals' => [
                     ['slug' => 'headache', 'label' => 'Say your head hurts', 'intent' => 'The learner says they have a headache.', 'example' => 'Man skauda galvą.', 'next' => 'medicine'],
@@ -171,15 +174,15 @@ class PharmacyVisitScenarioSeeder extends Seeder
                 'slug' => 'medicine',
                 'setting' => 'Rasa shows a few simple medicines.',
                 'lines' => [
-                    ['lt' => 'Štai galimi vaistai.', 'en' => 'Here are possible medicines.'],
-                    ['lt' => 'Ar norite paklausti kainos ar kaip vartoti?', 'en' => 'Do you want to ask the price or how to use it?'],
-                    ['lt' => 'Prašom. Galite paklausti apie kainą arba vartojimą.', 'en' => 'Please. You can ask about the price or use.'],
-                    ['lt' => 'Šis vaistas kainuoja šešis eurus.', 'en' => 'This medicine costs six euros.', 'trigger_goal' => 'ask-price', 'priority' => 100],
-                    ['lt' => 'Kaina yra šeši eurai.', 'en' => 'The price is six euros.', 'trigger_goal' => 'ask-price', 'priority' => 100],
-                    ['lt' => 'Vartokite po vieną tabletę du kartus per dieną.', 'en' => 'Take one tablet twice a day.', 'trigger_goal' => 'ask-how-to-use', 'priority' => 100],
-                    ['lt' => 'Gerkite vieną tabletę ryte ir vakare.', 'en' => 'Take one tablet in the morning and evening.', 'trigger_goal' => 'ask-how-to-use', 'priority' => 100],
-                    ['lt' => 'Taip, norint nusipirkti, galite eiti prie kasos.', 'en' => 'Yes, if you want to buy it, you can go to the checkout.', 'trigger_goal' => 'want-buy', 'priority' => 100],
-                    ['lt' => 'Gerai, galite pirkti prie kasos.', 'en' => 'Alright, you can buy it at the checkout.', 'trigger_goal' => 'want-buy', 'priority' => 100],
+                    ['target_text' => 'Štai galimi vaistai.', 'support_translation' => 'Here are possible medicines.'],
+                    ['target_text' => 'Ar norite paklausti kainos ar kaip vartoti?', 'support_translation' => 'Do you want to ask the price or how to use it?'],
+                    ['target_text' => 'Prašom. Galite paklausti apie kainą arba vartojimą.', 'support_translation' => 'Please. You can ask about the price or use.'],
+                    ['target_text' => 'Šis vaistas kainuoja šešis eurus.', 'support_translation' => 'This medicine costs six euros.', 'trigger_goal' => 'ask-price', 'priority' => 100],
+                    ['target_text' => 'Kaina yra šeši eurai.', 'support_translation' => 'The price is six euros.', 'trigger_goal' => 'ask-price', 'priority' => 100],
+                    ['target_text' => 'Vartokite po vieną tabletę du kartus per dieną.', 'support_translation' => 'Take one tablet twice a day.', 'trigger_goal' => 'ask-how-to-use', 'priority' => 100],
+                    ['target_text' => 'Gerkite vieną tabletę ryte ir vakare.', 'support_translation' => 'Take one tablet in the morning and evening.', 'trigger_goal' => 'ask-how-to-use', 'priority' => 100],
+                    ['target_text' => 'Taip, norint nusipirkti, galite eiti prie kasos.', 'support_translation' => 'Yes, if you want to buy it, you can go to the checkout.', 'trigger_goal' => 'want-buy', 'priority' => 100],
+                    ['target_text' => 'Gerai, galite pirkti prie kasos.', 'support_translation' => 'Alright, you can buy it at the checkout.', 'trigger_goal' => 'want-buy', 'priority' => 100],
                 ],
                 'props' => $medicine,
                 'goals' => [
@@ -192,15 +195,15 @@ class PharmacyVisitScenarioSeeder extends Seeder
                 'slug' => 'payment',
                 'setting' => 'The learner is ready to pay.',
                 'lines' => [
-                    ['lt' => 'Ar mokėsite kortele ar grynaisiais?', 'en' => 'Will you pay by card or in cash?'],
-                    ['lt' => 'Prašom prie kasos.', 'en' => 'Please come to the checkout.'],
-                    ['lt' => 'Kaip norėsite mokėti?', 'en' => 'How would you like to pay?'],
-                    ['lt' => 'Ačiū. Mokėjimas kortele priimtas.', 'en' => 'Thank you. Card payment accepted.', 'trigger_goal' => 'pay-card', 'priority' => 100],
-                    ['lt' => 'Puiku. Kortele apmokėta.', 'en' => 'Great. Paid by card.', 'trigger_goal' => 'pay-card', 'priority' => 100],
-                    ['lt' => 'Ačiū. Štai jūsų grąža.', 'en' => 'Thank you. Here is your change.', 'trigger_goal' => 'pay-cash', 'priority' => 100],
-                    ['lt' => 'Ačiū. Grynaisiais tinka.', 'en' => 'Thank you. Cash is fine.', 'trigger_goal' => 'pay-cash', 'priority' => 100],
-                    ['lt' => 'Prašom. Linkiu greitai pasveikti!', 'en' => 'You are welcome. I hope you get well soon!', 'trigger_goal' => 'say-goodbye', 'priority' => 100],
-                    ['lt' => 'Ačiū jums. Iki pasimatymo!', 'en' => 'Thank you. See you!', 'trigger_goal' => 'say-goodbye', 'priority' => 100],
+                    ['target_text' => 'Ar mokėsite kortele ar grynaisiais?', 'support_translation' => 'Will you pay by card or in cash?'],
+                    ['target_text' => 'Prašom prie kasos.', 'support_translation' => 'Please come to the checkout.'],
+                    ['target_text' => 'Kaip norėsite mokėti?', 'support_translation' => 'How would you like to pay?'],
+                    ['target_text' => 'Ačiū. Mokėjimas kortele priimtas.', 'support_translation' => 'Thank you. Card payment accepted.', 'trigger_goal' => 'pay-card', 'priority' => 100],
+                    ['target_text' => 'Puiku. Kortele apmokėta.', 'support_translation' => 'Great. Paid by card.', 'trigger_goal' => 'pay-card', 'priority' => 100],
+                    ['target_text' => 'Ačiū. Štai jūsų grąža.', 'support_translation' => 'Thank you. Here is your change.', 'trigger_goal' => 'pay-cash', 'priority' => 100],
+                    ['target_text' => 'Ačiū. Grynaisiais tinka.', 'support_translation' => 'Thank you. Cash is fine.', 'trigger_goal' => 'pay-cash', 'priority' => 100],
+                    ['target_text' => 'Prašom. Linkiu greitai pasveikti!', 'support_translation' => 'You are welcome. I hope you get well soon!', 'trigger_goal' => 'say-goodbye', 'priority' => 100],
+                    ['target_text' => 'Ačiū jums. Iki pasimatymo!', 'support_translation' => 'Thank you. See you!', 'trigger_goal' => 'say-goodbye', 'priority' => 100],
                 ],
                 'goals' => [
                     ['slug' => 'pay-card', 'label' => 'Pay by card', 'intent' => 'The learner says they will pay by card.', 'example' => 'Mokėsiu kortele.', 'next' => null],

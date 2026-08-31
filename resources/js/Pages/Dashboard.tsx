@@ -33,7 +33,7 @@ export default function Dashboard({ stats, recentScenarios }: Props) {
                 </p>
                 <h1 className="text-3xl font-semibold tracking-tight">Content operations</h1>
                 <p className="max-w-3xl text-sm leading-6 text-slate-600">
-                    Manage teacher-authored Lithuanian scenarios, dialogue, CEFR metadata, and
+                    Manage teacher-authored scenarios, dialogue, CEFR metadata, and
                     publishing state from Laravel, the app source of truth.
                 </p>
             </div>

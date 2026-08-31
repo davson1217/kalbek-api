@@ -7,9 +7,9 @@ use App\Data\SynthesizedAudio;
 
 class FakeTextToSpeechSynthesizer implements TextToSpeechSynthesizer
 {
-    public function synthesize(string $text): SynthesizedAudio
+    public function synthesize(string $text, string $languageCode = 'lt', string $languageName = 'Lithuanian', ?string $voice = null): SynthesizedAudio
     {
-        return new SynthesizedAudio($this->wavTone($text), 'audio/wav');
+        return new SynthesizedAudio($this->wavTone("{$languageCode}|{$voice}|{$text}"), 'audio/wav');
     }
 
     private function wavTone(string $text): string

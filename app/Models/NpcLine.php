@@ -12,8 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'scene_id',
     'trigger_goal_id',
-    'lt',
-    'en',
+    'target_text',
+    'support_translation',
     'cefr_level',
     'priority',
     'sort_order',

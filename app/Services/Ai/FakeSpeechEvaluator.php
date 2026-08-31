@@ -18,6 +18,8 @@ class FakeSpeechEvaluator implements SpeechEvaluatorContract
         bool $strict = false,
         string $contentCefrLevel = 'a1',
         string $learnerCefrLevel = 'pre_a1',
+        string $targetLanguageCode = 'lt',
+        string $targetLanguageName = 'Lithuanian',
     ): array {
         $transcript = (string) config('services.kalbek.fake_speech_transcript', 'Ar turite maisto?');
         $pass = (bool) config('services.kalbek.fake_speech_pass', true);

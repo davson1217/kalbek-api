@@ -40,8 +40,8 @@ class ScenePropController extends Controller
     {
         return $request->validate([
             'type' => ['required', Rule::in(['menu_item'])],
-            'lt' => ['required', 'string', 'max:500'],
-            'en' => ['required', 'string', 'max:500'],
+            'target_text' => ['required', 'string', 'max:500'],
+            'support_translation' => ['required', 'string', 'max:500'],
             'price' => ['nullable', 'string', 'max:80'],
             'sort_order' => ['required', 'integer', 'min:0'],
         ]);

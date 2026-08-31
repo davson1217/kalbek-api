@@ -95,8 +95,8 @@ function PreviewGoal({ goal }: { goal: GoalRecord }) {
 function PreviewLine({ line }: { line: NpcLineRecord }) {
     return (
         <div className="rounded-2xl border border-slate-100 bg-white px-3 py-2 shadow-sm">
-            <p className="font-bold leading-6 text-slate-950">{line.lt}</p>
-            <p className="text-sm leading-6 text-slate-500">{line.en}</p>
+            <p className="font-bold leading-6 text-slate-950">{line.target_text}</p>
+            <p className="text-sm leading-6 text-slate-500">{line.support_translation}</p>
         </div>
     );
 }

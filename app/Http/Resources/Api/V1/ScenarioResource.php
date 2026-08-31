@@ -20,6 +20,15 @@ class ScenarioResource extends JsonResource
             'subtitle' => $this->subtitle,
             'description' => $this->description,
             'emoji' => $this->emoji,
+            'language' => $this->whenLoaded('language', fn () => [
+                'code' => $this->language->code,
+                'name' => $this->language->name,
+                'native_name' => $this->language->native_name,
+                'support_language' => [
+                    'code' => $this->language->support_language_code,
+                    'name' => $this->language->support_language_name,
+                ],
+            ]),
             'character' => $this->whenLoaded('character', fn () => [
                 'id' => $this->character->slug,
                 'name' => $this->character->name,
@@ -38,16 +47,16 @@ class ScenarioResource extends JsonResource
                 'setting' => $scene->setting,
                 'cefr_level' => $scene->cefr_level?->value,
                 'lines' => $scene->npcLines->map(fn ($line): array => [
-                    'lt' => $line->lt,
-                    'en' => $line->en,
+                    'target_text' => $line->target_text,
+                    'support_translation' => $line->support_translation,
                     'cefr_level' => $line->cefr_level?->value,
                     'trigger_goal_id' => $line->triggerGoal?->slug,
                     'priority' => $line->priority,
                 ])->values(),
                 'props' => $scene->props->map(fn ($prop): array => [
                     'type' => $prop->type,
-                    'lt' => $prop->lt,
-                    'en' => $prop->en,
+                    'target_text' => $prop->target_text,
+                    'support_translation' => $prop->support_translation,
                     'price' => $prop->price,
                     'metadata' => $prop->metadata,
                 ])->values(),

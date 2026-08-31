@@ -21,8 +21,8 @@ class ScenePropFactory extends Factory
         return [
             'scene_id' => Scene::factory(),
             'type' => 'menu_item',
-            'lt' => fake()->words(2, true),
-            'en' => fake()->words(2, true),
+            'target_text' => fake()->words(2, true),
+            'support_translation' => fake()->words(2, true),
             'price' => fake()->randomFloat(2, 2, 20).' €',
             'metadata' => null,
             'sort_order' => fake()->numberBetween(1, 50),

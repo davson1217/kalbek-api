@@ -39,8 +39,8 @@ class ScenarioContentAuditTest extends TestCase
         NpcLine::factory()->for($scene)->create(['trigger_goal_id' => null]);
         NpcLine::factory()->for($scene)->create([
             'trigger_goal_id' => $goal->id,
-            'lt' => 'Malonu, Jonai.',
-            'en' => 'Nice to meet you, Jonas.',
+            'target_text' => 'Malonu, Jonai.',
+            'support_translation' => 'Nice to meet you, Jonas.',
         ]);
 
         $this->artisan('kalbek:audit-content --fail')

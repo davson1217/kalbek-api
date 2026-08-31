@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\ContentStatus;
 use App\Models\Character;
+use App\Models\Language;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,6 +20,15 @@ class CharacterFactory extends Factory
     public function definition(): array
     {
         return [
+            'language_id' => fn (): int => Language::query()->where('code', 'lt')->value('id')
+                ?? Language::factory()->create([
+                    'code' => 'lt',
+                    'name' => 'Lithuanian',
+                    'native_name' => 'Lietuvių',
+                    'support_language_code' => 'en',
+                    'support_language_name' => 'English',
+                    'sort_order' => 10,
+                ])->id,
             'slug' => fake()->unique()->slug(2),
             'name' => fake()->firstName(),
             'role' => fake()->words(3, true),

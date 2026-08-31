@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Goal;
+use App\Models\Language;
 use App\Models\NpcLine;
 use App\Models\Scenario;
 use App\Models\Scene;
@@ -27,6 +28,49 @@ class CmsContentManagementTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Scenarios/Index')
                 ->has('scenarios', 1));
+    }
+
+    public function test_admin_can_manage_languages(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get(route('cms.languages.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Languages/Index'));
+
+        $this->actingAs($admin)->post(route('cms.languages.store'), [
+            'code' => 'en',
+            'name' => 'English',
+            'native_name' => 'English',
+            'support_language_code' => 'en',
+            'support_language_name' => 'English',
+            'status' => 'active',
+            'default_voice' => 'default-female',
+            'sort_order' => 20,
+        ])->assertRedirect();
+
+        $language = Language::query()->where('code', 'en')->firstOrFail();
+
+        $this->actingAs($admin)->put(route('cms.languages.update', $language), [
+            'code' => 'en',
+            'name' => 'English',
+            'native_name' => 'English',
+            'support_language_code' => 'en',
+            'support_language_name' => 'English',
+            'status' => 'draft',
+            'default_voice' => 'default-male',
+            'sort_order' => 30,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('languages', [
+            'code' => 'en',
+            'support_language_code' => 'en',
+            'support_language_name' => 'English',
+            'status' => 'draft',
+            'default_voice' => 'default-male',
+            'sort_order' => 30,
+        ]);
     }
 
     public function test_admin_can_create_scene_goal_and_npc_line(): void
@@ -57,8 +101,8 @@ class CmsContentManagementTest extends TestCase
         $goal = Goal::query()->where('scene_id', $scene->id)->where('slug', 'test-goal')->firstOrFail();
 
         $this->actingAs($admin)->post(route('cms.scenarios.scenes.lines.store', [$scenario, $scene]), [
-            'lt' => 'Taip, turime testą.',
-            'en' => 'Yes, we have a test.',
+            'target_text' => 'Taip, turime testą.',
+            'support_translation' => 'Yes, we have a test.',
             'cefr_level' => 'a1',
             'trigger_goal_id' => $goal->id,
             'priority' => 100,
@@ -68,7 +112,7 @@ class CmsContentManagementTest extends TestCase
         $this->assertDatabaseHas('npc_lines', [
             'scene_id' => $scene->id,
             'trigger_goal_id' => $goal->id,
-            'lt' => 'Taip, turime testą.',
+            'target_text' => 'Taip, turime testą.',
             'cefr_level' => 'a1',
             'priority' => 100,
         ]);
@@ -77,7 +121,7 @@ class CmsContentManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Scenarios/Show')
-                ->where('scenario.scenes.5.goals.0.response_lines.0.lt', 'Taip, turime testą.'));
+                ->where('scenario.scenes.5.goals.0.response_lines.0.target_text', 'Taip, turime testą.'));
     }
 
     public function test_character_reply_must_belong_to_a_goal_in_the_same_scene(): void
@@ -91,8 +135,8 @@ class CmsContentManagementTest extends TestCase
         $otherGoal = Goal::query()->where('scene_id', $secondScene->id)->firstOrFail();
 
         $this->actingAs($admin)->from(route('cms.scenarios.show', $scenario))->post(route('cms.scenarios.scenes.lines.store', [$scenario, $firstScene]), [
-            'lt' => 'Taip.',
-            'en' => 'Yes.',
+            'target_text' => 'Taip.',
+            'support_translation' => 'Yes.',
             'cefr_level' => 'a1',
             'trigger_goal_id' => $otherGoal->id,
             'priority' => 100,
@@ -101,7 +145,7 @@ class CmsContentManagementTest extends TestCase
             ->assertRedirect(route('cms.scenarios.show', $scenario))
             ->assertSessionHasErrors('trigger_goal_id');
 
-        $this->assertSame(0, NpcLine::query()->where('scene_id', $firstScene->id)->where('lt', 'Taip.')->count());
+        $this->assertSame(0, NpcLine::query()->where('scene_id', $firstScene->id)->where('target_text', 'Taip.')->count());
     }
 
     public function test_admin_can_see_scenario_flow_audit_issues(): void

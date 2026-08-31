@@ -10,11 +10,11 @@ use Laravel\Ai\Audio;
 
 class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
 {
-    public function synthesize(string $text): SynthesizedAudio
+    public function synthesize(string $text, string $languageCode = 'lt', string $languageName = 'Lithuanian', ?string $voice = null): SynthesizedAudio
     {
-        $voice = 'default-female';
+        $voice ??= 'default-female';
         $model = config('services.kalbek.tts_model', 'gpt-4o-mini-tts');
-        $cacheKey = hash('sha256', "{$model}|{$voice}|{$text}");
+        $cacheKey = hash('sha256', "{$languageCode}|{$model}|{$voice}|{$text}");
 
         $cached = GeneratedAudio::query()->where('cache_key', $cacheKey)->first();
 
@@ -30,7 +30,7 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
 
         $audio = Audio::of($text)
             ->voice($voice)
-            ->instructions('Speak in clear, natural Lithuanian with correct Lithuanian pronunciation and stress. Warm, friendly, and slightly slow, like a patient native speaker in an everyday conversation.')
+            ->instructions("Speak in clear, natural {$languageName} with correct {$languageName} pronunciation and stress. Warm, friendly, and slightly slow, like a patient native speaker in an everyday conversation.")
             ->timeout(45)
             ->generate(model: $model);
 

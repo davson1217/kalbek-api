@@ -17,5 +17,7 @@ interface SpeechEvaluatorContract
         bool $strict = false,
         string $contentCefrLevel = 'a1',
         string $learnerCefrLevel = 'pre_a1',
+        string $targetLanguageCode = 'lt',
+        string $targetLanguageName = 'Lithuanian',
     ): array;
 }

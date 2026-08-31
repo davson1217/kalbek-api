@@ -174,7 +174,7 @@ class AuditScenarioContent
         }
 
         foreach ($this->exampleSpecificTokens($goal) as $token) {
-            if ($goal->responseLines->contains(fn (NpcLine $line): bool => Str::contains($line->lt.' '.$line->en, $token, true))) {
+            if ($goal->responseLines->contains(fn (NpcLine $line): bool => Str::contains($line->target_text.' '.$line->support_translation, $token, true))) {
                 $issues[] = $this->issue(
                     'warning',
                     'goal',

@@ -11,8 +11,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable([
     'scene_id',
     'type',
-    'lt',
-    'en',
+    'target_text',
+    'support_translation',
     'price',
     'metadata',
     'sort_order',

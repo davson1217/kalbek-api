@@ -7,13 +7,16 @@ use App\Http\Resources\Api\V1\ScenarioResource;
 use App\Http\Resources\Api\V1\ScenarioSummaryResource;
 use App\Models\Scenario;
 use App\Services\Content\ScenarioPayloadBuilder;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ScenarioController extends Controller
 {
-    public function index(ScenarioPayloadBuilder $payloadBuilder): AnonymousResourceCollection
+    public function index(Request $request, ScenarioPayloadBuilder $payloadBuilder): AnonymousResourceCollection
     {
-        return ScenarioSummaryResource::collection($payloadBuilder->publishedSummaries());
+        $languageCode = $request->string('language')->trim()->lower()->value() ?: null;
+
+        return ScenarioSummaryResource::collection($payloadBuilder->publishedSummaries($languageCode));
     }
 
     public function show(Scenario $scenario, ScenarioPayloadBuilder $payloadBuilder): ScenarioResource

@@ -4,14 +4,21 @@ namespace Database\Seeders;
 
 use App\ContentStatus;
 use App\Models\Character;
+use App\Models\Language;
 use Illuminate\Database\Seeder;
 
 class CharacterSeeder extends Seeder
 {
     public function run(): void
     {
+        $this->call(LanguageSeeder::class);
+
+        $lithuanian = Language::query()->where('code', 'lt')->firstOrFail();
+        $english = Language::query()->where('code', 'en')->firstOrFail();
+
         $characters = [
             [
+                'language_id' => $lithuanian->id,
                 'slug' => 'gabija',
                 'name' => 'Gabija',
                 'role' => 'your speaking coach',
@@ -23,6 +30,7 @@ class CharacterSeeder extends Seeder
                 'status' => ContentStatus::Published,
             ],
             [
+                'language_id' => $lithuanian->id,
                 'slug' => 'rasa',
                 'name' => 'Rasa',
                 'role' => 'the waitress',
@@ -35,6 +43,22 @@ class CharacterSeeder extends Seeder
                     'Beveik!',
                 ],
                 'sort_order' => 20,
+                'status' => ContentStatus::Published,
+            ],
+            [
+                'language_id' => $english->id,
+                'slug' => 'emily',
+                'name' => 'Emily',
+                'role' => 'the shop assistant',
+                'image_path' => 'characters/emily.png',
+                'intro' => "Hello! Choose a scene and let's speak English out loud.",
+                'praise_lines' => ['Great!', 'Very good!', 'Nicely said.'],
+                'encouragement_lines' => [
+                    'Try once more.',
+                    'Almost there.',
+                    'That was close. Please repeat it.',
+                ],
+                'sort_order' => 30,
                 'status' => ContentStatus::Published,
             ],
         ];

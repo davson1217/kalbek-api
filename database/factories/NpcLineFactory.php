@@ -21,8 +21,8 @@ class NpcLineFactory extends Factory
         return [
             'scene_id' => Scene::factory(),
             'trigger_goal_id' => null,
-            'lt' => fake()->sentence(),
-            'en' => fake()->sentence(),
+            'target_text' => fake()->sentence(),
+            'support_translation' => fake()->sentence(),
             'cefr_level' => null,
             'priority' => fake()->numberBetween(0, 100),
             'sort_order' => fake()->numberBetween(1, 50),

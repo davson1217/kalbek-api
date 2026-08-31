@@ -7,6 +7,7 @@ import type { ComponentType } from 'react';
 import Login from './Pages/Auth/Login';
 import CharactersIndex from './Pages/Characters/Index';
 import Dashboard from './Pages/Dashboard';
+import LanguagesIndex from './Pages/Languages/Index';
 import ScenariosIndex from './Pages/Scenarios/Index';
 import ScenariosShow from './Pages/Scenarios/Show';
 
@@ -15,6 +16,7 @@ const pages: Record<string, ComponentType<any>> = {
     'Auth/Login': Login,
     'Characters/Index': CharactersIndex,
     Dashboard,
+    'Languages/Index': LanguagesIndex,
     'Scenarios/Index': ScenariosIndex,
     'Scenarios/Show': ScenariosShow,
 };

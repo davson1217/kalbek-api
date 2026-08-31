@@ -12,6 +12,7 @@ class ScenarioSeeder extends Seeder
             RestaurantScenarioSeeder::class,
             PharmacyVisitScenarioSeeder::class,
             A1ScenarioSeeder::class,
+            EnglishShopScenarioSeeder::class,
         ]);
     }
 }

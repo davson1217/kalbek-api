@@ -20,6 +20,15 @@ class ScenarioSummaryResource extends JsonResource
             'subtitle' => $this->subtitle,
             'description' => $this->description,
             'emoji' => $this->emoji,
+            'language' => $this->whenLoaded('language', fn () => [
+                'code' => $this->language->code,
+                'name' => $this->language->name,
+                'native_name' => $this->language->native_name,
+                'support_language' => [
+                    'code' => $this->language->support_language_code,
+                    'name' => $this->language->support_language_name,
+                ],
+            ]),
             'character' => $this->whenLoaded('character', fn () => [
                 'id' => $this->character->slug,
                 'name' => $this->character->name,

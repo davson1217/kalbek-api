@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Scenario;
 use Database\Seeders\A1ScenarioSeeder;
 use Database\Seeders\CharacterSeeder;
+use Database\Seeders\EnglishShopScenarioSeeder;
 use Database\Seeders\PharmacyVisitScenarioSeeder;
 use Database\Seeders\RestaurantScenarioSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -25,8 +26,47 @@ class ScenarioApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.0.id', 'restoranas')
             ->assertJsonPath('data.0.title', 'Restorane')
+            ->assertJsonPath('data.0.language.code', 'lt')
+            ->assertJsonPath('data.0.language.support_language.code', 'en')
             ->assertJsonPath('data.0.character.id', 'rasa')
             ->assertJsonMissing(['id' => 'draft-scene']);
+    }
+
+    public function test_active_languages_are_listed_for_the_learner_api(): void
+    {
+        $this->seed([CharacterSeeder::class, RestaurantScenarioSeeder::class]);
+
+        $this->getJson('/api/v1/languages')
+            ->assertOk()
+            ->assertJsonPath('data.0.code', 'lt')
+            ->assertJsonPath('data.0.name', 'Lithuanian')
+            ->assertJsonPath('data.0.support_language.code', 'en')
+            ->assertJsonPath('data.0.support_language.name', 'English');
+    }
+
+    public function test_english_shop_scenario_is_listed_and_served_by_language(): void
+    {
+        $this->seed([CharacterSeeder::class, EnglishShopScenarioSeeder::class]);
+
+        $this->getJson('/api/v1/scenarios?language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'at-the-shop')
+            ->assertJsonPath('data.0.title', 'At the shop')
+            ->assertJsonPath('data.0.language.code', 'en')
+            ->assertJsonPath('data.0.character.id', 'emily');
+
+        $this->getJson('/api/v1/scenarios/at-the-shop')
+            ->assertOk()
+            ->assertJsonPath('data.language.code', 'en')
+            ->assertJsonPath('data.language.support_language.code', 'en')
+            ->assertJsonPath('data.start_scene_id', 'looking-for-items')
+            ->assertJsonCount(3, 'data.scenes')
+            ->assertJsonPath('data.scenes.0.goals.0.id', 'en-shop-milk')
+            ->assertJsonPath('data.scenes.0.goals.0.next', 'price-and-bag')
+            ->assertJsonFragment(['target_text' => 'Hello! Can I help you?'])
+            ->assertJsonFragment(['trigger_goal_id' => 'en-shop-price'])
+            ->assertJsonFragment(['id' => 'en-shop-goodbye', 'next' => null]);
     }
 
     public function test_restaurant_scenario_detail_includes_the_scene_graph(): void
@@ -38,6 +78,8 @@ class ScenarioApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('data.id', 'restoranas')
+            ->assertJsonPath('data.language.code', 'lt')
+            ->assertJsonPath('data.language.support_language.name', 'English')
             ->assertJsonPath('data.cefr_level', 'a1')
             ->assertJsonPath('data.start_scene_id', 'atvykimas')
             ->assertJsonPath('data.character.id', 'rasa')
@@ -47,9 +89,9 @@ class ScenarioApiTest extends TestCase
             ->assertJsonPath('data.scenes.0.goals.0.cefr_level', 'a1')
             ->assertJsonPath('data.scenes.1.id', 'sodinimas')
             ->assertJsonPath('data.scenes.2.id', 'meniu')
-            ->assertJsonPath('data.scenes.2.props.0.lt', 'Sriuba')
-            ->assertJsonFragment(['lt' => 'Laba diena! Kuo galiu jums padėti?'])
-            ->assertJsonFragment(['lt' => 'Prašom, sėskitės čia.'])
+            ->assertJsonPath('data.scenes.2.props.0.target_text', 'Sriuba')
+            ->assertJsonFragment(['target_text' => 'Laba diena! Kuo galiu jums padėti?'])
+            ->assertJsonFragment(['target_text' => 'Prašom, sėskitės čia.'])
             ->assertJsonFragment(['trigger_goal_id' => 'order-soup'])
             ->assertJsonCount(5, 'data.scenes')
             ->assertJsonCount(5, 'data.scenes.2.props');

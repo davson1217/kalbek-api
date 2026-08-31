@@ -40,8 +40,8 @@ class NpcLineController extends Controller
     private function validated(Request $request, Scene $scene): array
     {
         return $request->validate([
-            'lt' => ['required', 'string', 'max:1000'],
-            'en' => ['required', 'string', 'max:1000'],
+            'target_text' => ['required', 'string', 'max:1000'],
+            'support_translation' => ['required', 'string', 'max:1000'],
             'cefr_level' => ['nullable', Rule::enum(CefrLevel::class)],
             'trigger_goal_id' => [
                 'nullable',

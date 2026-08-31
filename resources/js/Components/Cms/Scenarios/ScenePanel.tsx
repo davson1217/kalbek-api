@@ -99,8 +99,8 @@ export function ScenePanel({ auditIssues, goalOptions, levels, scenario, scene, 
                                 <button key={prop.id} type="button" onClick={() => setModal({ type: 'edit-prop', prop })} className="w-full rounded-2xl border border-slate-100 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-100 hover:shadow-md">
                                     <div className="flex items-start justify-between gap-3">
                                         <div>
-                                            <p className="font-bold text-slate-950">{prop.lt}</p>
-                                            <p className="text-sm text-slate-500">{prop.en}</p>
+                                            <p className="font-bold text-slate-950">{prop.target_text}</p>
+                                            <p className="text-sm text-slate-500">{prop.support_translation}</p>
                                         </div>
                                         {prop.price ? <StatusBadge tone="emerald">{prop.price}</StatusBadge> : null}
                                     </div>
@@ -172,8 +172,8 @@ function SceneModals({ closeModal, goalOptions, levels, modal, scenario, scene, 
 function LineCard({ line, onClick }: { line: NpcLineRecord; onClick: () => void }) {
     return (
         <button type="button" onClick={onClick} className="w-full rounded-2xl border border-slate-100 bg-white p-3 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-cyan-100 hover:shadow-md">
-            <p className="font-bold leading-6 text-slate-950">{line.lt}</p>
-            <p className="mt-1 text-sm text-slate-500">{line.en}</p>
+            <p className="font-bold leading-6 text-slate-950">{line.target_text}</p>
+            <p className="mt-1 text-sm text-slate-500">{line.support_translation}</p>
             <div className="mt-3 flex flex-wrap gap-2">
                 <StatusBadge tone="violet">priority {line.priority}</StatusBadge>
                 <StatusBadge>{line.trigger_goal_id ?? 'opening'}</StatusBadge>

@@ -1,14 +1,16 @@
 import { Head, useForm } from '@inertiajs/react';
 
 import { CmsLayout, FieldError, InputLabel } from '../../Layouts/CmsLayout';
-import type { CharacterRecord } from '../../types';
+import type { CharacterRecord, LanguageOption } from '../../types';
 
 interface Props {
     characters: CharacterRecord[];
     statuses: string[];
+    languages: LanguageOption[];
 }
 
 const emptyCharacter = {
+    language_id: 0,
     slug: '',
     name: '',
     role: '',
@@ -20,8 +22,8 @@ const emptyCharacter = {
     status: 'draft',
 };
 
-export default function CharactersIndex({ characters, statuses }: Props) {
-    const create = useForm(emptyCharacter);
+export default function CharactersIndex({ characters, statuses, languages }: Props) {
+    const create = useForm({ ...emptyCharacter, language_id: languages[0]?.id ?? 0 });
 
     return (
         <CmsLayout>
@@ -41,6 +43,7 @@ export default function CharactersIndex({ characters, statuses }: Props) {
                 <TextField label="Slug" value={create.data.slug} onChange={(value) => create.setData('slug', value)} error={create.errors.slug} />
                 <TextField label="Name" value={create.data.name} onChange={(value) => create.setData('name', value)} error={create.errors.name} />
                 <TextField label="Role" value={create.data.role} onChange={(value) => create.setData('role', value)} error={create.errors.role} />
+                <LanguageSelect value={create.data.language_id} languages={languages} onChange={(value) => create.setData('language_id', Number(value))} />
                 <SelectField label="Status" value={create.data.status} onChange={(value) => create.setData('status', value)} options={statuses} />
                 <div className="lg:col-span-4">
                     <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white" type="submit">
@@ -51,15 +54,16 @@ export default function CharactersIndex({ characters, statuses }: Props) {
 
             <div className="mt-6 space-y-4">
                 {characters.map((character) => (
-                    <CharacterForm key={character.id} character={character} statuses={statuses} />
+                    <CharacterForm key={character.id} character={character} statuses={statuses} languages={languages} />
                 ))}
             </div>
         </CmsLayout>
     );
 }
 
-function CharacterForm({ character, statuses }: { character: CharacterRecord; statuses: string[] }) {
+function CharacterForm({ character, statuses, languages }: { character: CharacterRecord; statuses: string[]; languages: LanguageOption[] }) {
     const form = useForm({
+        language_id: character.language_id ?? languages[0]?.id ?? 0,
         slug: character.slug,
         name: character.name,
         role: character.role,
@@ -83,6 +87,7 @@ function CharacterForm({ character, statuses }: { character: CharacterRecord; st
                 <TextField label="Slug" value={form.data.slug} onChange={(value) => form.setData('slug', value)} error={form.errors.slug} />
                 <TextField label="Name" value={form.data.name} onChange={(value) => form.setData('name', value)} error={form.errors.name} />
                 <TextField label="Role" value={form.data.role} onChange={(value) => form.setData('role', value)} error={form.errors.role} />
+                <LanguageSelect value={form.data.language_id} languages={languages} onChange={(value) => form.setData('language_id', Number(value))} />
                 <SelectField label="Status" value={form.data.status} onChange={(value) => form.setData('status', value)} options={statuses} />
                 <TextField label="Image path" value={form.data.image_path} onChange={(value) => form.setData('image_path', value)} />
                 <TextField label="Sort" type="number" value={form.data.sort_order} onChange={(value) => form.setData('sort_order', Number(value))} />
@@ -103,6 +108,17 @@ function CharacterForm({ character, statuses }: { character: CharacterRecord; st
                 Save character
             </button>
         </form>
+    );
+}
+
+function LanguageSelect({ value, languages, onChange }: { value: number; languages: LanguageOption[]; onChange: (value: string) => void }) {
+    return (
+        <label className="block">
+            <InputLabel>Language</InputLabel>
+            <select value={value} onChange={(event) => onChange(event.target.value)} className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2">
+                {languages.map((language) => <option key={language.id} value={language.id}>{language.name} ({language.code})</option>)}
+            </select>
+        </label>
     );
 }
 

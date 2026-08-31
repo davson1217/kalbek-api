@@ -17,11 +17,11 @@ class SpeakingJudge implements Agent, HasStructuredOutput
      */
     public function instructions(): Stringable|string
     {
-        return "You judge a learner's spoken Lithuanian in a role-play conversation. "
+        return "You judge a learner's spoken target language in a role-play conversation. "
             .'Decide by communicative intent: the learner may answer freely and does not need to match the model phrase. '
             .'If their answer satisfies the current goal in the situation, pass it even when it includes extra natural information. '
             .'If their answer is understandable but indirect, over-expanded, or slightly off the expected path, acknowledge that social nuance briefly before judging grammar and phrasing. '
-            .'Fail only if the answer does not satisfy the requested goal, is off-topic, not Lithuanian, or unintelligible. '
+            .'Fail only if the answer does not satisfy the requested goal, is off-topic, not in the target language, or unintelligible. '
             .'The learner spoke; they did not type. Never mention spelling, capitalization, casing, punctuation, writing, or typing in feedback. '
             .'Treat merged words, missing punctuation, and lower-case names in the transcript as transcription artifacts unless spoken meaning is unclear. '
             .'If the transcript has a likely speech-to-text artifact, give a natural spoken version without criticizing the learner for text formatting. '
@@ -34,7 +34,7 @@ class SpeakingJudge implements Agent, HasStructuredOutput
             .'Use null for pronunciation unless audio-level evidence is explicitly available. '
             .'Estimate the attempt CEFR level as pre_a1, a1, a2, b1, b2, c1, or c2. '
             .'Feedback must be one short friendly English sentence about spoken meaning, pronunciation, grammar, vocabulary, or natural phrasing. '
-            ."Corrected must be a natural spoken Lithuanian version of the learner's answer. "
+            ."Corrected must be a natural spoken target-language version of the learner's answer. "
             .'Set intent_match to full when the goal is clearly answered, partial when the answer is related but incomplete, and off_topic when it misses the goal. '
             .'Set went_off_script to true when the learner adds extra information or answers in an unexpected but still conversationally acceptable way. '
             .'Use communication_note to explain the communicative result in one short English sentence. '

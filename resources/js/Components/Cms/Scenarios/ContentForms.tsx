@@ -34,19 +34,19 @@ export function GoalForm({ action, goal, levels, method = 'post', onSuccess, sce
             <SelectField label="CEFR" help="The difficulty level expected for this learner goal. Use Inherit when it follows the scene level." value={form.data.cefr_level} onChange={(value) => form.setData('cefr_level', String(value))} options={blankOptions(levels)} />
             <TextField label="Sort" placeholder="0" help="Controls the display order of goals in this scene." type="number" value={form.data.sort_order} onChange={(value) => form.setData('sort_order', Number(value))} />
             <div className="md:col-span-2"><Textarea label="What the learner is trying to say" placeholder="The learner wants to know whether a table is available." help="Describe the meaning we should accept from the learner, not just one exact sentence." value={form.data.intent} onChange={(value) => form.setData('intent', value)} /></div>
-            <div className="md:col-span-2"><Textarea label="Example learner phrase" placeholder="Ar turite laisvą staliuką?" help="One good Lithuanian example that expresses this goal." value={form.data.example} onChange={(value) => form.setData('example', value)} /></div>
+            <div className="md:col-span-2"><Textarea label="Example learner phrase" placeholder="Ar turite laisvą staliuką?" help="One good target-language example that expresses this goal." value={form.data.example} onChange={(value) => form.setData('example', value)} /></div>
             <div className="md:col-span-2"><PrimaryButton type="submit" icon={Save} disabled={form.processing}>{goal ? 'Save goal' : 'Create goal'}</PrimaryButton></div>
         </form>
     );
 }
 
 export function LineForm({ action, goalOptions, initialGoalId = '', levels, line, method = 'post', onSuccess }: { action: string; goalOptions: Array<{ value: number; label: string }>; initialGoalId?: number | ''; levels: string[]; line?: NpcLineRecord; method?: Method; onSuccess?: () => void }) {
-    const form = useForm({ lt: line?.lt ?? '', en: line?.en ?? '', cefr_level: line?.cefr_level ?? '', trigger_goal_id: line?.trigger_goal_db_id ?? initialGoalId, priority: line?.priority ?? 0, sort_order: line?.sort_order ?? 0 });
+    const form = useForm({ target_text: line?.target_text ?? '', support_translation: line?.support_translation ?? '', cefr_level: line?.cefr_level ?? '', trigger_goal_id: line?.trigger_goal_db_id ?? initialGoalId, priority: line?.priority ?? 0, sort_order: line?.sort_order ?? 0 });
 
     return (
         <form onSubmit={(event) => submit(event, form, action, method, onSuccess)} className="grid gap-4 md:grid-cols-2">
-            <div className="md:col-span-2"><Textarea label="Lithuanian character reply" placeholder="Žinoma. Prašau eiti paskui mane, čia yra staliukas prie lango." help="What the scenario character says to the learner in Lithuanian." value={form.data.lt} onChange={(value) => form.setData('lt', value)} rows={4} /></div>
-            <div className="md:col-span-2"><Textarea label="English meaning" placeholder="Of course. Please follow me, here is a table by the window." help="A clear English meaning for editors and debugging. This is not shown as the main learner challenge." value={form.data.en} onChange={(value) => form.setData('en', value)} rows={3} /></div>
+            <div className="md:col-span-2"><Textarea label="Target-language character reply" placeholder="Žinoma. Prašau eiti paskui mane, čia yra staliukas prie lango." help="What the scenario character says to the learner in the scenario language." value={form.data.target_text} onChange={(value) => form.setData('target_text', value)} rows={4} /></div>
+            <div className="md:col-span-2"><Textarea label="Support translation" placeholder="Of course. Please follow me, here is a table by the window." help="A clear support translation for editors and learner support. This is not the main learner challenge." value={form.data.support_translation} onChange={(value) => form.setData('support_translation', value)} rows={3} /></div>
             <SelectField label="Triggered after goal" help="Choose the learner goal that should cause this reply. Opening lines can stay generic; response lines should be tied to the exact learner goal they answer." value={form.data.trigger_goal_id} onChange={(value) => form.setData('trigger_goal_id', value === '' ? '' : Number(value))} options={[{ value: '', label: 'Opening / generic scene line' }, ...goalOptions]} />
             <SelectField label="CEFR" help="The language difficulty of this character reply. Use Inherit when it follows the scene level." value={form.data.cefr_level} onChange={(value) => form.setData('cefr_level', String(value))} options={blankOptions(levels)} />
             <TextField label="Priority" placeholder="100" help="When several replies match, higher priority wins. Use this to prefer the best authored response." type="number" value={form.data.priority} onChange={(value) => form.setData('priority', Number(value))} />
@@ -57,13 +57,13 @@ export function LineForm({ action, goalOptions, initialGoalId = '', levels, line
 }
 
 export function PropForm({ action, method = 'post', onSuccess, prop }: { action: string; method?: Method; onSuccess?: () => void; prop?: ScenePropRecord }) {
-    const form = useForm({ type: prop?.type ?? 'menu_item', lt: prop?.lt ?? '', en: prop?.en ?? '', price: prop?.price ?? '', sort_order: prop?.sort_order ?? 0 });
+    const form = useForm({ type: prop?.type ?? 'menu_item', target_text: prop?.target_text ?? '', support_translation: prop?.support_translation ?? '', price: prop?.price ?? '', sort_order: prop?.sort_order ?? 0 });
 
     return (
         <form onSubmit={(event) => submit(event, form, action, method, onSuccess)} className="grid gap-4 md:grid-cols-2">
             <TextField label="Type" placeholder="menu_item" help="The kind of supporting content, such as menu_item, sign, object, or hint." value={form.data.type} onChange={(value) => form.setData('type', value)} />
-            <TextField label="Lithuanian" placeholder="Cepelinai" help="The Lithuanian text shown for this prop or menu item." value={form.data.lt} onChange={(value) => form.setData('lt', value)} />
-            <TextField label="English" placeholder="Potato dumplings" help="English meaning for editors and learner support." value={form.data.en} onChange={(value) => form.setData('en', value)} />
+            <TextField label="Target-language text" placeholder="Cepelinai" help="The scenario-language text shown for this prop or menu item." value={form.data.target_text} onChange={(value) => form.setData('target_text', value)} />
+            <TextField label="Support translation" placeholder="Potato dumplings" help="Support translation for editors and learner support." value={form.data.support_translation} onChange={(value) => form.setData('support_translation', value)} />
             <TextField label="Price" placeholder="€8.50" help="Optional price or short value shown with menu-style items." value={form.data.price} onChange={(value) => form.setData('price', value)} />
             <TextField label="Sort" placeholder="0" help="Controls the display order of props and menu items." type="number" value={form.data.sort_order} onChange={(value) => form.setData('sort_order', Number(value))} />
             <div className="md:col-span-2"><PrimaryButton type="submit" icon={Save} disabled={form.processing}>{prop ? 'Save prop' : 'Create prop'}</PrimaryButton></div>

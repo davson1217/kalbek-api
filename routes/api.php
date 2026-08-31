@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\LessonCompletionController;
 use App\Http\Controllers\Api\V1\LessonProgressController;
+use App\Http\Controllers\Api\V1\LanguageController;
 use App\Http\Controllers\Api\V1\OAuthExchangeController;
 use App\Http\Controllers\Api\V1\PasswordResetController;
 use App\Http\Controllers\Api\V1\ProfileController;
@@ -34,6 +35,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
 
     Route::apiResource('scenarios', ScenarioController::class)
         ->only(['index', 'show']);
+    Route::get('/languages', [LanguageController::class, 'index'])
+        ->name('languages.index');
     Route::get('/tts', TextToSpeechController::class)
         ->name('tts');
 

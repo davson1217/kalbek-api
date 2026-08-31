@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\ContentStatus;
 use App\Models\Character;
+use App\Models\Language;
 use App\Models\Scenario;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -20,6 +21,15 @@ class ScenarioFactory extends Factory
     public function definition(): array
     {
         return [
+            'language_id' => fn (): int => Language::query()->where('code', 'lt')->value('id')
+                ?? Language::factory()->create([
+                    'code' => 'lt',
+                    'name' => 'Lithuanian',
+                    'native_name' => 'Lietuvių',
+                    'support_language_code' => 'en',
+                    'support_language_name' => 'English',
+                    'sort_order' => 10,
+                ])->id,
             'character_id' => Character::factory(),
             'slug' => fake()->unique()->slug(2),
             'title' => fake()->words(2, true),

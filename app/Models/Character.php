@@ -7,9 +7,11 @@ use Database\Factories\CharacterFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 #[Fillable([
+    'language_id',
     'slug',
     'name',
     'role',
@@ -28,6 +30,11 @@ class Character extends Model
     public function scenarios(): HasMany
     {
         return $this->hasMany(Scenario::class);
+    }
+
+    public function language(): BelongsTo
+    {
+        return $this->belongsTo(Language::class);
     }
 
     public function getRouteKeyName(): string

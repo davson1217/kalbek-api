@@ -14,7 +14,8 @@ class ProfileResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $languageLevel = $this->user?->languageLevels?->firstWhere('language_code', 'lt');
+        $languageCode = $request->string('language')->trim()->lower()->value() ?: 'lt';
+        $languageLevel = $this->user?->languageLevels?->firstWhere('language_code', $languageCode);
 
         return [
             'display_name' => $this->display_name,
@@ -47,7 +48,7 @@ class ProfileResource extends JsonResource
                 'last_evaluated_at' => $languageLevel->last_evaluated_at?->toISOString(),
                 'explanation' => 'Your proficiency level is estimated over time from speaking attempts, using grammar, vocabulary range, cohesion and coherence, task completion, and pronunciation evidence when available.',
             ] : [
-                'language_code' => 'lt',
+                'language_code' => $languageCode,
                 'current_cefr_level' => 'pre_a1',
                 'current_cefr_label' => 'Pre-A1',
                 'confidence_score' => 0,
