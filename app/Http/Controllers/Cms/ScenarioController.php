@@ -83,6 +83,7 @@ class ScenarioController extends Controller
             'cefr_level' => ['nullable', Rule::enum(CefrLevel::class)],
             'start_scene_slug' => ['nullable', 'string', 'max:100'],
             'status' => ['required', Rule::enum(ContentStatus::class)],
+            'is_free' => ['required', 'boolean'],
             'sort_order' => ['required', 'integer', 'min:0'],
         ]);
     }
@@ -100,6 +101,7 @@ class ScenarioController extends Controller
             'cefr_level' => $scenario->cefr_level?->value,
             'start_scene_slug' => $scenario->start_scene_slug,
             'status' => $scenario->status->value,
+            'is_free' => (bool) $scenario->is_free,
             'sort_order' => $scenario->sort_order,
             'language_id' => $scenario->language_id,
             'language' => $scenario->language ? [

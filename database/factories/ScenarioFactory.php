@@ -39,6 +39,7 @@ class ScenarioFactory extends Factory
             'tone' => 'primary',
             'start_scene_slug' => null,
             'status' => ContentStatus::Published,
+            'is_free' => false,
             'sort_order' => fake()->numberBetween(1, 50),
             'published_at' => now(),
         ];
@@ -49,6 +50,13 @@ class ScenarioFactory extends Factory
         return $this->state(fn (): array => [
             'status' => ContentStatus::Draft,
             'published_at' => null,
+        ]);
+    }
+
+    public function free(): static
+    {
+        return $this->state(fn (): array => [
+            'is_free' => true,
         ]);
     }
 }

@@ -25,6 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'cefr_level',
     'start_scene_slug',
     'status',
+    'is_free',
     'sort_order',
     'published_at',
 ])]
@@ -74,6 +75,7 @@ class Scenario extends Model
         return [
             'published_at' => 'datetime',
             'sort_order' => 'integer',
+            'is_free' => 'boolean',
             'status' => ContentStatus::class,
             'cefr_level' => CefrLevel::class,
         ];

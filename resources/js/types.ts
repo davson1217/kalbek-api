@@ -62,6 +62,7 @@ export interface ScenarioSummary {
     cefr_level: string | null;
     start_scene_slug: string | null;
     status: string;
+    is_free: boolean;
     sort_order: number;
     language_id: number;
     language: LanguageOption | null;

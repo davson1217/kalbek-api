@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Contracts\DialogueOrchestratorContract;
 use App\Contracts\SpeechEvaluatorContract;
 use App\Contracts\TextToSpeechSynthesizer;
+use App\Modules\Subscriptions\Contracts\SubscriptionGateway;
+use App\Modules\Subscriptions\Gateways\StripeSubscriptionGateway;
 use App\Services\Ai\DialogueOrchestrator;
 use App\Services\Ai\FakeDialogueOrchestrator;
 use App\Services\Ai\FakeSpeechEvaluator;
@@ -37,6 +39,8 @@ class AppServiceProvider extends ServiceProvider
                 ? new FakeTextToSpeechSynthesizer
                 : new LaravelAiTextToSpeechSynthesizer;
         });
+
+        $this->app->bind(SubscriptionGateway::class, StripeSubscriptionGateway::class);
     }
 
     /**

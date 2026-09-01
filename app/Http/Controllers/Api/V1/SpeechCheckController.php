@@ -11,17 +11,31 @@ use App\Models\Goal;
 use App\Models\Scenario;
 use App\Models\SpeakingAttempt;
 use App\Models\User;
+use App\Modules\Subscriptions\SubscriptionManager;
 use App\SpeakingAttemptStatus;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
 class SpeechCheckController extends Controller
 {
-    public function __invoke(SpeechCheckRequest $request, SpeechEvaluatorContract $evaluator, DialogueOrchestratorContract $orchestrator): JsonResponse
-    {
+    public function __invoke(
+        SpeechCheckRequest $request,
+        SpeechEvaluatorContract $evaluator,
+        DialogueOrchestratorContract $orchestrator,
+        SubscriptionManager $subscriptions,
+    ): JsonResponse {
         $data = $request->validated();
         /** @var User $user */
         $user = $request->user();
+        $access = $subscriptions->accessFor($user);
+
+        if (! $access->canUseAi) {
+            return response()->json([
+                'message' => 'Your free trial has ended. Subscribe to continue speaking practice.',
+                'subscription' => $access->toArray(),
+            ], 402);
+        }
+
         $scenario = Scenario::query()->with('language')->where('slug', $data['scenario_id'])->firstOrFail();
         $scene = $scenario->scenes()->where('slug', $data['scene_id'])->first();
 

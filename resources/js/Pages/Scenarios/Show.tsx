@@ -48,6 +48,7 @@ export default function ScenarioShow({ scenario, auditIssues, characters, langua
                     <div className="flex flex-wrap gap-2 pt-1">
                         <StatusBadge tone="cyan">{scenario.cefr_level?.toUpperCase() ?? 'UNSET'}</StatusBadge>
                         <StatusBadge tone="emerald">{scenario.status}</StatusBadge>
+                        <StatusBadge tone={scenario.is_free ? 'emerald' : 'slate'}>{scenario.is_free ? 'Free scenario' : 'Paid scenario'}</StatusBadge>
                         <StatusBadge>{scenario.language ? `${scenario.language.name} (${scenario.language.code})` : 'No language'}</StatusBadge>
                         <StatusBadge>{scenario.character ?? 'No character'}</StatusBadge>
                         <StatusBadge>{scenario.scenes.length} scenes</StatusBadge>

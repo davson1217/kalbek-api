@@ -33,6 +33,7 @@ class PharmacyVisitScenarioSeeder extends Seeder
                     'cefr_level' => 'a1',
                     'start_scene_slug' => 'greeting',
                     'status' => ContentStatus::Published,
+                    'is_free' => false,
                     'sort_order' => 50,
                     'published_at' => now(),
                 ],

@@ -4,11 +4,14 @@ namespace App\Services\Auth;
 
 use App\Models\Character;
 use App\Models\User;
+use App\Modules\Subscriptions\SubscriptionManager;
 use App\Notifications\WelcomeToKalbek;
 use Illuminate\Support\Facades\DB;
 
 class RegisterUser
 {
+    public function __construct(private readonly SubscriptionManager $subscriptions) {}
+
     /**
      * @param  array{name: string, email: string, password: string}  $data
      */
@@ -23,9 +26,11 @@ class RegisterUser
                 'display_name' => $data['name'],
             ]);
 
+            $this->subscriptions->startTrial($user);
+
             $user->notify(new WelcomeToKalbek);
 
-            return $user->load('profile.avatarCharacter');
+            return $user->load('profile.avatarCharacter', 'subscriptions');
         });
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Modules\Subscriptions\Models\Subscription;
 use App\Notifications\ResetPasswordForFrontend;
 use App\UserRole;
 use Database\Factories\UserFactory;
@@ -40,6 +41,11 @@ class User extends Authenticatable
     public function languageLevels(): HasMany
     {
         return $this->hasMany(LearnerLanguageLevel::class);
+    }
+
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
     }
 
     public function sendPasswordResetNotification($token): void

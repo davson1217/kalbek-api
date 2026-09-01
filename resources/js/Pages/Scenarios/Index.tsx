@@ -67,6 +67,7 @@ export default function ScenariosIndex({ scenarios, characters, languages, statu
                                     <th className="hidden px-4 py-3 md:table-cell">Character</th>
                                     <th className="hidden px-4 py-3 lg:table-cell">Language</th>
                                     <th className="px-4 py-3">Level</th>
+                                    <th className="hidden px-4 py-3 xl:table-cell">Access</th>
                                     <th className="hidden px-4 py-3 xl:table-cell">Scenes</th>
                                     <th className="px-4 py-3 text-right">Actions</th>
                                 </tr>
@@ -86,6 +87,7 @@ export default function ScenariosIndex({ scenarios, characters, languages, statu
                                         <td className="hidden px-4 py-4 text-slate-600 md:table-cell">{scenario.character ?? 'No character'}</td>
                                         <td className="hidden px-4 py-4 text-slate-600 lg:table-cell">{scenario.language ? `${scenario.language.name} (${scenario.language.code})` : 'No language'}</td>
                                         <td className="px-4 py-4"><StatusBadge tone="cyan">{scenario.cefr_level?.toUpperCase() ?? 'UNSET'}</StatusBadge></td>
+                                        <td className="hidden px-4 py-4 xl:table-cell"><StatusBadge tone={scenario.is_free ? 'emerald' : 'slate'}>{scenario.is_free ? 'Free' : 'Paid'}</StatusBadge></td>
                                         <td className="hidden px-4 py-4 xl:table-cell"><StatusBadge>{scenario.scenes_count ?? 0} scenes</StatusBadge></td>
                                         <td className="px-4 py-4 text-right">
                                             <SecondaryButton icon={Edit3} onClick={() => setEditing(scenario)}>Edit</SecondaryButton>

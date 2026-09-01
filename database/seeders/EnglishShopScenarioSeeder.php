@@ -33,6 +33,7 @@ class EnglishShopScenarioSeeder extends Seeder
                     'cefr_level' => 'a1',
                     'start_scene_slug' => 'looking-for-items',
                     'status' => ContentStatus::Published,
+                    'is_free' => true,
                     'sort_order' => 10,
                     'published_at' => now(),
                 ],

@@ -40,7 +40,9 @@ class ScenarioResource extends JsonResource
             ]),
             'tone' => $this->tone,
             'cefr_level' => $this->cefr_level?->value,
-            'available' => true,
+            'is_free' => (bool) $this->is_free,
+            'available' => $this->getAttribute('available_for_user') ?? true,
+            'availability_reason' => $this->getAttribute('availability_reason'),
             'start_scene_id' => $this->start_scene_slug,
             'scenes' => $this->whenLoaded('scenes', fn () => $this->scenes->map(fn ($scene): array => [
                 'id' => $scene->slug,

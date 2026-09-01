@@ -33,6 +33,7 @@ class RestaurantScenarioSeeder extends Seeder
                     'cefr_level' => 'a1',
                     'start_scene_slug' => 'atvykimas',
                     'status' => ContentStatus::Published,
+                    'is_free' => false,
                     'sort_order' => 40,
                     'published_at' => now(),
                 ],

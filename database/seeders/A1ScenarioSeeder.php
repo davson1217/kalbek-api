@@ -35,6 +35,7 @@ class A1ScenarioSeeder extends Seeder
                         'cefr_level' => 'a1',
                         'start_scene_slug' => $scenarioData['start_scene'],
                         'status' => ContentStatus::Published,
+                        'is_free' => $scenarioData['is_free'] ?? false,
                         'sort_order' => $scenarioData['sort_order'],
                         'published_at' => now(),
                     ],
@@ -132,6 +133,7 @@ class A1ScenarioSeeder extends Seeder
                 'emoji' => '👋',
                 'character' => 'gabija',
                 'tone' => 'primary',
+                'is_free' => true,
                 'sort_order' => 10,
                 'start_scene' => 'pasisveikinimas',
                 'scenes' => [
@@ -191,6 +193,7 @@ class A1ScenarioSeeder extends Seeder
                 'emoji' => '☕',
                 'character' => 'rasa',
                 'tone' => 'amber',
+                'is_free' => true,
                 'sort_order' => 20,
                 'start_scene' => 'uzsakymas',
                 'scenes' => [

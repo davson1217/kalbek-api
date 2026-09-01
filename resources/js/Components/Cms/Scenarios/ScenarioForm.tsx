@@ -20,6 +20,7 @@ export function ScenarioForm({ action, characters, languages, levels, method = '
         cefr_level: scenario?.cefr_level ?? 'a1',
         start_scene_slug: scenario?.start_scene_slug ?? '',
         status: scenario?.status ?? 'draft',
+        is_free: scenario?.is_free ?? false,
         sort_order: scenario?.sort_order ?? 0,
     });
 
@@ -42,6 +43,19 @@ export function ScenarioForm({ action, characters, languages, levels, method = '
             <TextField label="Emoji" placeholder="🍽️" help="A quick visual marker for the scenario card." value={form.data.emoji} onChange={(value) => form.setData('emoji', value)} />
             <TextField label="Start scene slug" placeholder="arrival" help="The slug of the first scene learners should enter. Leave blank until scenes have been created." value={form.data.start_scene_slug} onChange={(value) => form.setData('start_scene_slug', value)} />
             <TextField label="Sort" placeholder="0" help="Controls display order. Lower numbers appear earlier." type="number" value={form.data.sort_order} onChange={(value) => form.setData('sort_order', Number(value))} />
+            <label className="md:col-span-2 flex items-start gap-3 rounded-2xl border border-cyan-100 bg-cyan-50/60 p-4">
+                <input
+                    type="checkbox"
+                    checked={Boolean(form.data.is_free)}
+                    onChange={(event) => form.setData('is_free', event.target.checked)}
+                    className="mt-1 size-4 rounded border-slate-300 text-cyan-700 focus:ring-cyan-500"
+                />
+                <span>
+                    <span className="block text-sm font-black text-slate-950">Free scenario</span>
+                    <span className="mt-1 block text-sm text-slate-600">Trial and grace-period learners can open CMS-selected free scenarios. Keep this limited to the intended free sample set.</span>
+                    {form.errors.is_free ? <span className="mt-1 block text-xs font-medium text-rose-600">{form.errors.is_free}</span> : null}
+                </span>
+            </label>
             <div className="md:col-span-2">
                 <Textarea label="Description" placeholder="The learner arrives at a restaurant, asks for a table, reads the menu, and places a simple order." help="A short editor-facing summary of what the learner practices in this scenario." rows={4} value={form.data.description} onChange={(value) => form.setData('description', value)} error={form.errors.description} />
             </div>

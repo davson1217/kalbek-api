@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources\Api\V1;
 
+use App\Modules\Subscriptions\SubscriptionManager;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -16,6 +17,7 @@ class ProfileResource extends JsonResource
     {
         $languageCode = $request->string('language')->trim()->lower()->value() ?: 'lt';
         $languageLevel = $this->user?->languageLevels?->firstWhere('language_code', $languageCode);
+        $subscription = $this->user ? app(SubscriptionManager::class)->accessFor($this->user)->toArray() : null;
 
         return [
             'display_name' => $this->display_name,
@@ -32,6 +34,7 @@ class ProfileResource extends JsonResource
             'last_practice_date' => $this->last_practice_date?->toDateString(),
             'strict_speech_mode' => (bool) $this->user?->strict_speech_mode,
             'strict_speech_mode_explanation' => 'Strict mode makes speech checks more demanding. Kalbek expects your answer to match the task more closely and may ask you to try again for grammar, vocabulary, or relevance issues.',
+            'subscription' => $subscription,
             'language_level' => $languageLevel ? [
                 'language_code' => $languageLevel->language_code,
                 'current_cefr_level' => $languageLevel->current_cefr_level->value,

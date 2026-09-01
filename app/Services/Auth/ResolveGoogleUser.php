@@ -4,6 +4,7 @@ namespace App\Services\Auth;
 
 use App\Models\Character;
 use App\Models\User;
+use App\Modules\Subscriptions\SubscriptionManager;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -11,6 +12,8 @@ use Laravel\Socialite\Contracts\User as SocialiteUser;
 
 class ResolveGoogleUser
 {
+    public function __construct(private readonly SubscriptionManager $subscriptions) {}
+
     public function handle(SocialiteUser $googleUser): User
     {
         $googleId = $googleUser->getId();
@@ -52,7 +55,9 @@ class ResolveGoogleUser
                 ],
             );
 
-            return $user->load('profile.avatarCharacter');
+            $this->subscriptions->startTrial($user);
+
+            return $user->load('profile.avatarCharacter', 'subscriptions');
         });
     }
 }
