@@ -68,7 +68,69 @@ make test           # Run PHPUnit
 make npm-build      # Build the Inertia CMS frontend
 make format         # Format PHP with Pint
 make lint           # Check PHP formatting with Pint
+php artisan kalbek:production-check --fail  # Validate launch configuration
 ```
+
+## Production Readiness
+
+Before a web launch, configure the API and frontend as separate public services.
+The Laravel API remains the source of truth for auth, CMS content, subscriptions,
+progress, generated audio, and AI speech evaluation.
+
+Minimum production API settings:
+
+```sh
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://api.your-domain.example
+KALBEK_FRONTEND_URL=https://app.your-domain.example
+FRONTEND_URL="${KALBEK_FRONTEND_URL}"
+
+DB_CONNECTION=mysql
+CACHE_STORE=redis
+QUEUE_CONNECTION=redis
+SESSION_DRIVER=redis
+
+MAIL_MAILER=resend # or smtp/postmark/ses
+MAIL_FROM_ADDRESS=hello@your-domain.example
+
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
+GOOGLE_REDIRECT_URI="${APP_URL}/auth/google/callback"
+
+KALBEK_AI_MODE=live
+OPENROUTER_API_KEY=
+
+STRIPE_SECRET=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_MONTHLY_PRICE_ID=
+STRIPE_ANNUAL_PRICE_ID=
+STRIPE_SUCCESS_URL="${KALBEK_FRONTEND_URL}/profile"
+STRIPE_CANCEL_URL="${KALBEK_FRONTEND_URL}/profile"
+```
+
+Run the deployment checks before cutting over traffic:
+
+```sh
+php artisan migrate --force
+php artisan db:seed --force
+php artisan kalbek:audit-content --fail
+php artisan kalbek:production-check --fail
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
+```
+
+External provider checks:
+
+- Google Cloud OAuth must include `GOOGLE_REDIRECT_URI` exactly.
+- Stripe webhook destination must point to `POST ${APP_URL}/api/v1/stripe/webhook`.
+- Password reset and welcome notifications require a real mail provider, not Mailpit/log.
+- The frontend build must use `VITE_KALBEK_API_URL=${APP_URL}/api/v1`.
+
+Smoke-test these flows after deploy: register, Google sign-in, password reset
+email, scenario list, scenario detail, TTS playback, speech check, free-trial
+lockout, Stripe checkout, Stripe webhook sync, billing portal, and CMS login.
 
 ## Current Routes
 
