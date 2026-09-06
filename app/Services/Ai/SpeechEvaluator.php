@@ -12,7 +12,7 @@ use Laravel\Ai\Transcription;
 class SpeechEvaluator implements SpeechEvaluatorContract
 {
     /**
-     * @return array{transcript: string, normalized_transcript: string, pass: bool, can_continue: bool, should_retry: bool, retry_reason: string, feedback: string, corrected: string, suggested_response: string, suggestion: string, communication: array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
+     * @return array{transcript: string, normalized_transcript: string, normalization_confidence: string, normalization_note: string, pass: bool, can_continue: bool, should_retry: bool, retry_reason: string, feedback: string, corrected: string, suggested_response: string, suggestion: string, communication: array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
      */
     public function evaluate(
         UploadedFile $audio,
@@ -34,6 +34,8 @@ class SpeechEvaluator implements SpeechEvaluatorContract
             return [
                 'transcript' => '',
                 'normalized_transcript' => '',
+                'normalization_confidence' => 'low',
+                'normalization_note' => 'No speech was detected.',
                 'pass' => false,
                 'can_continue' => false,
                 'should_retry' => true,
@@ -85,7 +87,23 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         $scores = $this->scoresFromVerdict($verdict);
         $overallScore = $this->overallScore($scores);
         $pass = (bool) ($verdict['pass'] ?? false);
-        $shouldRetry = (bool) ($verdict['should_retry'] ?? (! $pass));
+        $normalizationConfidence = $this->normalizationConfidence($verdict['normalization_confidence'] ?? null);
+        $normalizationNote = $this->speechFirstFeedback((string) ($verdict['normalization_note'] ?? ''), $example);
+        $shouldRetry = (bool) ($verdict['should_retry'] ?? (! $pass)) || $normalizationConfidence === 'low';
+        $retryReason = $shouldRetry
+            ? $this->speechFirstFeedback((string) ($verdict['retry_reason'] ?? ''), $example)
+            : '';
+
+        if ($shouldRetry && $normalizationConfidence === 'low' && $retryReason === '') {
+            $retryReason = $normalizationNote !== ''
+                ? $normalizationNote
+                : 'I could not confidently hear that. Please try again a little more clearly.';
+        }
+
+        if ($shouldRetry && $retryReason === '') {
+            $retryReason = 'Try once more before continuing.';
+        }
+
         $canContinue = $pass && ! $shouldRetry;
         $normalizedTranscript = trim((string) ($verdict['normalized_transcript'] ?? $normalizedTranscript));
         $suggestedResponse = trim((string) ($verdict['suggested_response'] ?? ($example !== '' ? $example : ($verdict['corrected'] ?? ''))));
@@ -93,10 +111,12 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         return [
             'transcript' => $transcript,
             'normalized_transcript' => $normalizedTranscript,
+            'normalization_confidence' => $normalizationConfidence,
+            'normalization_note' => $normalizationNote,
             'pass' => $pass,
             'can_continue' => $canContinue,
             'should_retry' => $shouldRetry,
-            'retry_reason' => $shouldRetry ? $this->speechFirstFeedback((string) ($verdict['retry_reason'] ?? 'Try once more before continuing.'), $example) : '',
+            'retry_reason' => $retryReason,
             'feedback' => $this->speechFirstFeedback((string) ($verdict['feedback'] ?? 'Try that again.'), $example),
             'corrected' => $normalizedTranscript,
             'suggested_response' => $suggestedResponse,
@@ -177,11 +197,33 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         return max(0, min(100, (int) $value));
     }
 
+    private function normalizationConfidence(mixed $value): string
+    {
+        return in_array($value, ['high', 'medium', 'low'], true) ? $value : 'high';
+    }
+
     private function normalizeTranscriptForJudging(string $transcript): string
     {
         return str($transcript)
+            ->replaceMatches('/\blaba\s*d[iey]a?na\b/iu', 'Laba diena')
+            ->replaceMatches('/\blaba\s*diena\b/iu', 'Laba diena')
+            ->replaceMatches('/\blabas\s*diena\b/iu', 'Laba diena')
             ->replaceMatches('/\blabadiena\b/iu', 'Laba diena')
-            ->replaceMatches('/\blabasdiena\b/iu', 'Labas diena')
+            ->replaceMatches('/\blabadiana\b/iu', 'Laba diena')
+            ->replaceMatches('/\blabasdiena\b/iu', 'Laba diena')
+            ->replaceMatches('/\blaba\s*rytas\b/iu', 'Labas rytas')
+            ->replaceMatches('/\blabasrytas\b/iu', 'Labas rytas')
+            ->replaceMatches('/\blabas\s*vakaras\b/iu', 'Labas vakaras')
+            ->replaceMatches('/\blabasvakaras\b/iu', 'Labas vakaras')
+            ->replaceMatches('/\baciu\b/iu', 'Ačiū')
+            ->replaceMatches('/\bachiu\b/iu', 'Ačiū')
+            ->replaceMatches('/\bprasau\b/iu', 'prašau')
+            ->replaceMatches('/\bprasom\b/iu', 'prašom')
+            ->replaceMatches('/\bviso\s*gero\b/iu', 'viso gero')
+            ->replaceMatches('/\bvisogero\b/iu', 'viso gero')
+            ->replaceMatches('/\bnoreciau\b/iu', 'norėčiau')
+            ->replaceMatches('/\bmokesiu\b/iu', 'mokėsiu')
+            ->replaceMatches('/\bkortele\b/iu', 'kortele')
             ->toString();
     }
 

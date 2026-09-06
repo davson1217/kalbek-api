@@ -35,9 +35,11 @@ class SpeakingJudge implements Agent, HasStructuredOutput
             .'Estimate the attempt CEFR level as pre_a1, a1, a2, b1, b2, c1, or c2. '
             .'Feedback must be one short friendly English sentence about spoken meaning, pronunciation, grammar, vocabulary, or natural phrasing. '
             .'normalized_transcript must be a conservative target-language interpretation of what the learner most likely said; do not add new meaning. '
+            .'Set normalization_confidence to high when the normalized transcript is very likely what the learner said, medium when likely enough to show to the learner, and low when uncertain. '
+            .'Use normalization_note to briefly explain uncertainty, or leave it empty when confidence is high. '
             .'For backward compatibility, set corrected to the same value as normalized_transcript. '
             .'suggested_response must be a natural target-language phrase the learner can try next for this exact goal. '
-            .'Set should_retry to true when the answer is understandable but too rough, incomplete, off-topic, mostly outside the target language, or fails strict mode. '
+            .'Set should_retry to true when normalization_confidence is low, or when the answer is understandable but too rough, incomplete, off-topic, mostly outside the target language, or fails strict mode. '
             .'Set should_retry to false when the conversation should continue. '
             .'retry_reason must be empty when should_retry is false, otherwise one short English reason. '
             .'Set intent_match to full when the goal is clearly answered, partial when the answer is related but incomplete, and off_topic when it misses the goal. '
@@ -55,6 +57,8 @@ class SpeakingJudge implements Agent, HasStructuredOutput
             'pass' => $schema->boolean()->required(),
             'feedback' => $schema->string()->required(),
             'normalized_transcript' => $schema->string()->required(),
+            'normalization_confidence' => $schema->string()->enum(['high', 'medium', 'low'])->required(),
+            'normalization_note' => $schema->string()->required(),
             'suggested_response' => $schema->string()->required(),
             'should_retry' => $schema->boolean()->required(),
             'retry_reason' => $schema->string()->required(),

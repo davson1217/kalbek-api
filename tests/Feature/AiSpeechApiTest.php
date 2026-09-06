@@ -164,6 +164,8 @@ class AiSpeechApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('transcript', 'Norėčiau staliuko dviem.')
             ->assertJsonPath('normalized_transcript', 'Norėčiau staliuko dviem.')
+            ->assertJsonPath('normalization_confidence', 'high')
+            ->assertJsonPath('normalization_note', '')
             ->assertJsonPath('pass', true)
             ->assertJsonPath('can_continue', true)
             ->assertJsonPath('should_retry', false)
@@ -195,6 +197,7 @@ class AiSpeechApiTest extends TestCase
             'metadata->can_continue' => true,
             'metadata->should_retry' => false,
             'metadata->normalized_transcript' => 'Norėčiau staliuko dviem.',
+            'metadata->normalization_confidence' => 'high',
             'metadata->suggested_response' => 'Norėčiau staliuko dviem, prašau.',
             'metadata->content_cefr_level' => 'a1',
             'metadata->learner_cefr_level' => 'a2',
@@ -276,6 +279,7 @@ class AiSpeechApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('transcript', 'Ar turite maisto?')
             ->assertJsonPath('normalized_transcript', 'Ar turite maisto?')
+            ->assertJsonPath('normalization_confidence', 'high')
             ->assertJsonPath('pass', true)
             ->assertJsonPath('can_continue', true)
             ->assertJsonPath('should_retry', false)
@@ -462,6 +466,46 @@ class AiSpeechApiTest extends TestCase
             && $prompt->contains('Judge the spoken answer, not the transcript formatting.'));
     }
 
+    public function test_speech_check_normalizes_common_a1_speech_to_text_artifacts(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Labadiana, noreciau arbatos, prasau.']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'feedback' => 'That was a clear polite order.',
+            'corrected' => 'Labadiana, noreciau arbatos, prasau.',
+            'scores' => [
+                'grammar' => 82,
+                'vocabulary' => 82,
+                'cohesion' => 80,
+                'task_completion' => 92,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, A1ScenarioSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'kavineje',
+            'scene_id' => 'uzsakymas',
+            'goal_id' => 'cafe-tea',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner orders one tea politely.',
+            'example' => 'Norėčiau arbatos, prašau.',
+            'context' => 'At a cafe.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('transcript', 'Labadiana, noreciau arbatos, prasau.')
+            ->assertJsonPath('normalized_transcript', 'Laba diena, norėčiau arbatos, prašau.')
+            ->assertJsonPath('corrected', 'Laba diena, norėčiau arbatos, prašau.');
+
+        SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
+            ->contains('Raw speech transcript: "Labadiana, noreciau arbatos, prasau."')
+            && $prompt->contains('Normalized transcript for judging: "Laba diena, norėčiau arbatos, prašau."'));
+    }
+
     public function test_speech_check_defaults_missing_communication_metadata_for_older_judge_payloads(): void
     {
         Sanctum::actingAs(User::factory()->create());
@@ -556,6 +600,66 @@ class AiSpeechApiTest extends TestCase
             'metadata->can_continue' => false,
             'metadata->should_retry' => true,
             'metadata->suggested_response' => 'Norėčiau kavos, prašau.',
+        ]);
+    }
+
+    public function test_speech_check_low_normalization_confidence_requires_retry_even_when_intent_passes(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['iki pasmatym']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'should_retry' => false,
+            'retry_reason' => '',
+            'feedback' => 'I understood part of that, but need it clearer.',
+            'normalized_transcript' => 'Iki pasimatymo.',
+            'normalization_confidence' => 'low',
+            'normalization_note' => 'I could not confidently hear the goodbye phrase.',
+            'suggested_response' => 'Iki pasimatymo.',
+            'corrected' => 'Iki pasimatymo.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'The meaning seems related, but the audio should be repeated.',
+            'improvement_focus' => 'pronunciation',
+            'scores' => [
+                'grammar' => 70,
+                'vocabulary' => 70,
+                'cohesion' => 70,
+                'task_completion' => 80,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, A1ScenarioSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'parduotuveje',
+            'scene_id' => 'kasa',
+            'goal_id' => 'shop-goodbye',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner says thank you and goodbye.',
+            'example' => 'Ačiū, viso gero.',
+            'context' => 'At a shop checkout.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('transcript', 'iki pasmatym')
+            ->assertJsonPath('normalized_transcript', 'Iki pasimatymo.')
+            ->assertJsonPath('normalization_confidence', 'low')
+            ->assertJsonPath('normalization_note', 'I could not confidently hear the goodbye phrase.')
+            ->assertJsonPath('pass', true)
+            ->assertJsonPath('can_continue', false)
+            ->assertJsonPath('should_retry', true)
+            ->assertJsonPath('retry_reason', 'I could not confidently hear the goodbye phrase.');
+
+        $this->assertDatabaseHas('speaking_attempts', [
+            'transcript' => 'iki pasmatym',
+            'passed' => false,
+            'metadata->judge_pass' => true,
+            'metadata->normalization_confidence' => 'low',
+            'metadata->normalization_note' => 'I could not confidently hear the goodbye phrase.',
         ]);
     }
 

@@ -119,6 +119,8 @@ class SpeechCheckController extends Controller
                 'should_retry' => (bool) ($result['should_retry'] ?? (! $canContinue)),
                 'retry_reason' => $result['retry_reason'] ?? '',
                 'normalized_transcript' => $result['normalized_transcript'] ?? $result['corrected'],
+                'normalization_confidence' => $result['normalization_confidence'] ?? 'high',
+                'normalization_note' => $result['normalization_note'] ?? '',
                 'suggested_response' => $result['suggested_response'] ?? $result['suggestion'] ?? '',
                 'communication' => $result['communication'],
                 'dialogue' => $dialogue,
