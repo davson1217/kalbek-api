@@ -7,6 +7,11 @@ use Monolog\Processor\PsrLogMessageProcessor;
 
 return [
 
+    'api_traffic' => [
+        'enabled' => env('KALBEK_LOG_API_TRAFFIC', env('APP_ENV') === 'local'),
+        'max_response_body_chars' => (int) env('KALBEK_LOG_API_RESPONSE_MAX_CHARS', 4000),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Default Log Channel

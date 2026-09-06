@@ -35,6 +35,8 @@ class AiSpeechApiTest extends TestCase
 
         $first
             ->assertOk()
+            ->assertHeader('accept-ranges', 'bytes')
+            ->assertHeader('content-length', (string) strlen('fake-audio-content'))
             ->assertHeader('content-type', 'audio/mpeg');
 
         Audio::assertGenerated(fn ($prompt): bool => $prompt->contains('Laba diena'));
@@ -70,6 +72,37 @@ class AiSpeechApiTest extends TestCase
 
         $this->assertStringStartsWith('RIFF', $response->content());
         Audio::assertNothingGenerated();
+    }
+
+    public function test_text_to_speech_supports_byte_range_requests_for_mobile_browsers(): void
+    {
+        Storage::fake('local');
+        Audio::fake([base64_encode('fake-audio-content')]);
+
+        $response = $this->withHeader('Range', 'bytes=5-9')
+            ->get('/api/v1/tts?text=Laba%20diena');
+
+        $response
+            ->assertStatus(206)
+            ->assertHeader('accept-ranges', 'bytes')
+            ->assertHeader('content-range', 'bytes 5-9/18')
+            ->assertHeader('content-length', '5')
+            ->assertContent('audio');
+    }
+
+    public function test_text_to_speech_rejects_invalid_byte_ranges(): void
+    {
+        Storage::fake('local');
+        Audio::fake([base64_encode('fake-audio-content')]);
+
+        $response = $this->withHeader('Range', 'bytes=999-1000')
+            ->get('/api/v1/tts?text=Laba%20diena');
+
+        $response
+            ->assertStatus(416)
+            ->assertHeader('accept-ranges', 'bytes')
+            ->assertHeader('content-range', 'bytes */18')
+            ->assertHeader('content-length', '0');
     }
 
     public function test_speech_check_requires_authentication(): void

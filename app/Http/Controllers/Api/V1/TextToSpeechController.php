@@ -22,14 +22,43 @@ class TextToSpeechController extends Controller
             $language?->default_voice,
         );
 
-        return $this->audioResponse($audio->content, $audio->mimeType);
+        return $this->audioResponse($request, $audio->content, $audio->mimeType);
     }
 
-    private function audioResponse(string $content, string $mimeType): Response
+    private function audioResponse(TextToSpeechRequest $request, string $content, string $mimeType): Response
     {
-        return response($content, 200, [
+        $size = strlen($content);
+        $headers = [
             'content-type' => $mimeType,
+            'accept-ranges' => 'bytes',
             'cache-control' => 'public, max-age=31536000, immutable',
+            'content-length' => (string) $size,
+        ];
+
+        $range = $request->headers->get('Range');
+
+        if (! $range || ! preg_match('/bytes=(\d*)-(\d*)/', $range, $matches)) {
+            return response($content, 200, $headers);
+        }
+
+        $start = $matches[1] === '' ? 0 : (int) $matches[1];
+        $end = $matches[2] === '' ? $size - 1 : (int) $matches[2];
+
+        if ($start >= $size || $end < $start) {
+            return response('', 416, [
+                ...$headers,
+                'content-range' => "bytes */{$size}",
+                'content-length' => '0',
+            ]);
+        }
+
+        $end = min($end, $size - 1);
+        $length = $end - $start + 1;
+
+        return response(substr($content, $start, $length), 206, [
+            ...$headers,
+            'content-length' => (string) $length,
+            'content-range' => "bytes {$start}-{$end}/{$size}",
         ]);
     }
 }

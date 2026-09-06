@@ -27,6 +27,7 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request, AuthPayloadFactory $payloadFactory): JsonResponse
     {
+        logger()->info("Hello World!");
         $credentials = $request->validated();
         $user = User::query()->where('email', $credentials['email'])->first();
 
