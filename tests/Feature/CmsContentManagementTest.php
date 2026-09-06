@@ -170,12 +170,15 @@ class CmsContentManagementTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Scenarios/Show')
-                ->where('auditIssues.0.severity', 'warning')
-                ->where('auditIssues.0.scene_slug', 'unfinished-scene')
-                ->where('auditIssues.0.message', 'Scene [restoranas/unfinished-scene] is not reachable from the start scene [atvykimas].')
-                ->where('auditIssues.1.severity', 'critical')
-                ->where('auditIssues.1.message', 'Scene [restoranas/unfinished-scene] has no opening/generic line.')
-                ->where('auditIssues.2.goal_slug', 'unfinished-goal'));
+                ->where('auditIssues', fn ($issues): bool => collect($issues)->contains(fn (array $issue): bool => $issue['severity'] === 'warning'
+                    && $issue['category'] === 'structure'
+                    && $issue['scene_slug'] === 'unfinished-scene'
+                    && $issue['message'] === 'Scene [restoranas/unfinished-scene] is not reachable from the start scene [atvykimas].')
+                    && collect($issues)->contains(fn (array $issue): bool => $issue['severity'] === 'critical'
+                        && $issue['category'] === 'dialogue'
+                        && $issue['message'] === 'Scene [restoranas/unfinished-scene] has no opening/generic line.')
+                    && collect($issues)->contains(fn (array $issue): bool => ($issue['goal_slug'] ?? null) === 'unfinished-goal'
+                        && filled($issue['recommendation'] ?? null))));
     }
 
     public function test_grant_cms_access_command_promotes_existing_user(): void

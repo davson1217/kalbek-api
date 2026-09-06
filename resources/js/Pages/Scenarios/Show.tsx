@@ -1,5 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Edit3, Plus } from 'lucide-react';
+import { Head, Link, router } from '@inertiajs/react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Edit3, PlayCircle, Plus } from 'lucide-react';
 import { useState } from 'react';
 
 import { Modal } from '../../Components/Cms/Modal';
@@ -103,16 +103,23 @@ export default function ScenarioShow({ scenario, auditIssues, characters, langua
 function FlowAuditPanel({ issues }: { issues: ScenarioAuditIssue[] }) {
     const criticalCount = issues.filter((issue) => issue.severity === 'critical').length;
     const warningCount = issues.filter((issue) => issue.severity === 'warning').length;
+    const runQa = () => router.reload({ only: ['auditIssues'], preserveScroll: true });
 
     if (issues.length === 0) {
         return (
             <section className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-5 shadow-lg shadow-emerald-100/50">
-                <div className="flex items-start gap-3">
-                    <CheckCircle2 className="mt-1 size-5 shrink-0 text-emerald-700" />
-                    <div>
-                        <h2 className="text-lg font-black text-emerald-950">Flow QA passed</h2>
-                        <p className="mt-1 text-sm leading-6 text-emerald-800">This scenario has a valid start scene, opening lines, goal replies, and goal-to-reply relationships.</p>
+                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="flex items-start gap-3">
+                        <CheckCircle2 className="mt-1 size-5 shrink-0 text-emerald-700" />
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Content QA</p>
+                            <h2 className="mt-1 text-lg font-black text-emerald-950">Flow QA passed</h2>
+                            <p className="mt-1 text-sm leading-6 text-emerald-800">This scenario has a valid start scene, opening lines, goal replies, and goal-to-reply relationships.</p>
+                        </div>
                     </div>
+                    <button type="button" onClick={runQa} className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5">
+                        <PlayCircle className="size-4" /> Run QA
+                    </button>
                 </div>
             </section>
         );
@@ -124,13 +131,17 @@ function FlowAuditPanel({ issues }: { issues: ScenarioAuditIssue[] }) {
                 <div className="flex items-start gap-3">
                     <AlertTriangle className="mt-1 size-5 shrink-0 text-amber-700" />
                     <div>
-                        <h2 className="text-lg font-black text-amber-950">Flow QA needs attention</h2>
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">Content QA</p>
+                        <h2 className="mt-1 text-lg font-black text-amber-950">Flow QA needs attention</h2>
                         <p className="mt-1 text-sm leading-6 text-amber-900">Resolve critical issues before publishing. Warnings are content quality risks that can make conversations feel unnatural.</p>
                     </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                     <StatusBadge tone={criticalCount > 0 ? 'rose' : 'emerald'}>{criticalCount} critical</StatusBadge>
                     <StatusBadge tone={warningCount > 0 ? 'amber' : 'emerald'}>{warningCount} warnings</StatusBadge>
+                    <button type="button" onClick={runQa} className="inline-flex items-center justify-center gap-2 rounded-full border border-amber-200 bg-white px-4 py-2 text-sm font-black text-amber-800 shadow-sm transition hover:-translate-y-0.5">
+                        <PlayCircle className="size-4" /> Run QA
+                    </button>
                 </div>
             </div>
             <div className="mt-4 grid gap-2">
@@ -138,9 +149,11 @@ function FlowAuditPanel({ issues }: { issues: ScenarioAuditIssue[] }) {
                     <div key={`${issue.scope}-${issue.message}-${index}`} className="rounded-2xl border border-white/80 bg-white/80 px-4 py-3 text-sm leading-6 text-slate-700 shadow-sm">
                         <div className="flex flex-wrap items-center gap-2">
                             <StatusBadge tone={issue.severity === 'critical' ? 'rose' : 'amber'}>{issue.severity}</StatusBadge>
+                            <StatusBadge>{issue.category}</StatusBadge>
                             <span className="font-black text-slate-950">{issueLocation(issue)}</span>
                         </div>
                         <p className="mt-2">{issue.message}</p>
+                        <p className="mt-1 text-slate-500"><span className="font-bold text-slate-700">Fix:</span> {issue.recommendation}</p>
                     </div>
                 ))}
             </div>

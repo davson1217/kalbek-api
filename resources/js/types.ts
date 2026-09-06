@@ -78,12 +78,14 @@ export interface ScenarioDetail extends ScenarioSummary {
 
 export interface ScenarioAuditIssue {
     severity: 'critical' | 'warning';
+    category: 'structure' | 'relationship' | 'dialogue' | 'level' | 'content';
     scope: 'scenario' | 'scene' | 'goal' | 'line';
     scenario_slug: string;
     scene_slug?: string;
     goal_slug?: string;
     line_id?: number;
     message: string;
+    recommendation: string;
 }
 
 export interface SceneRecord {
