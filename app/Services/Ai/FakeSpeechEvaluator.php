@@ -8,7 +8,7 @@ use Illuminate\Http\UploadedFile;
 class FakeSpeechEvaluator implements SpeechEvaluatorContract
 {
     /**
-     * @return array{transcript: string, pass: bool, feedback: string, corrected: string, suggestion: string, communication: array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
+     * @return array{transcript: string, normalized_transcript: string, pass: bool, can_continue: bool, should_retry: bool, retry_reason: string, feedback: string, corrected: string, suggested_response: string, suggestion: string, communication: array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
      */
     public function evaluate(
         UploadedFile $audio,
@@ -23,13 +23,19 @@ class FakeSpeechEvaluator implements SpeechEvaluatorContract
     ): array {
         $transcript = (string) config('services.kalbek.fake_speech_transcript', 'Ar turite maisto?');
         $pass = (bool) config('services.kalbek.fake_speech_pass', true);
+        $suggestedResponse = $example !== '' ? $example : $transcript;
 
         return [
             'transcript' => $transcript,
+            'normalized_transcript' => $transcript,
             'pass' => $pass,
+            'can_continue' => $pass,
+            'should_retry' => ! $pass,
+            'retry_reason' => $pass ? '' : 'Try once more before continuing.',
             'feedback' => (string) config('services.kalbek.fake_speech_feedback', 'Dev AI mode: speech accepted without calling an AI provider.'),
-            'corrected' => $example !== '' ? $example : $transcript,
-            'suggestion' => $example,
+            'corrected' => $transcript,
+            'suggested_response' => $suggestedResponse,
+            'suggestion' => $suggestedResponse,
             'communication' => [
                 'intent_match' => $pass ? 'full' : 'partial',
                 'understood_meaning' => $pass,

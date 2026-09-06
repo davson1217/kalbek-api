@@ -163,9 +163,13 @@ class AiSpeechApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('transcript', 'Norėčiau staliuko dviem.')
+            ->assertJsonPath('normalized_transcript', 'Norėčiau staliuko dviem.')
             ->assertJsonPath('pass', true)
+            ->assertJsonPath('can_continue', true)
+            ->assertJsonPath('should_retry', false)
             ->assertJsonPath('feedback', 'That works well.')
             ->assertJsonPath('corrected', 'Norėčiau staliuko dviem.')
+            ->assertJsonPath('suggested_response', 'Norėčiau staliuko dviem, prašau.')
             ->assertJsonPath('suggestion', 'Norėčiau staliuko dviem, prašau.')
             ->assertJsonPath('communication.intent_match', 'full')
             ->assertJsonPath('communication.understood_meaning', true)
@@ -187,6 +191,11 @@ class AiSpeechApiTest extends TestCase
             'attempt_cefr_level' => 'a1',
             'metadata->communication->intent_match' => 'full',
             'metadata->communication->went_off_script' => true,
+            'metadata->judge_pass' => true,
+            'metadata->can_continue' => true,
+            'metadata->should_retry' => false,
+            'metadata->normalized_transcript' => 'Norėčiau staliuko dviem.',
+            'metadata->suggested_response' => 'Norėčiau staliuko dviem, prašau.',
             'metadata->content_cefr_level' => 'a1',
             'metadata->learner_cefr_level' => 'a2',
         ]);
@@ -266,8 +275,12 @@ class AiSpeechApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('transcript', 'Ar turite maisto?')
+            ->assertJsonPath('normalized_transcript', 'Ar turite maisto?')
             ->assertJsonPath('pass', true)
+            ->assertJsonPath('can_continue', true)
+            ->assertJsonPath('should_retry', false)
             ->assertJsonPath('corrected', 'Ar turite maisto?')
+            ->assertJsonPath('suggested_response', 'Ar turite maisto?')
             ->assertJsonPath('suggestion', 'Ar turite maisto?')
             ->assertJsonPath('communication.intent_match', 'full')
             ->assertJsonPath('communication.note', 'The spoken answer satisfies the current goal.')
@@ -439,6 +452,7 @@ class AiSpeechApiTest extends TestCase
         $response
             ->assertOk()
             ->assertJsonPath('transcript', 'Labadiena, mano vardas devydas.')
+            ->assertJsonPath('normalized_transcript', 'Laba diena, mano vardas devydas.')
             ->assertJsonPath('feedback', 'That was understandable. A more natural spoken version is: Laba diena, mano vardas Deivydas.')
             ->assertJsonPath('communication.note', 'That was understandable. Try saying the phrase a little more clearly and naturally.');
 
@@ -482,6 +496,67 @@ class AiSpeechApiTest extends TestCase
             ->assertJsonPath('communication.went_off_script', false)
             ->assertJsonPath('communication.note', 'You answered the goal clearly.')
             ->assertJsonPath('communication.improvement_focus', 'none');
+    }
+
+    public function test_speech_check_can_request_retry_without_replacing_or_advancing_the_answer(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Noriu kavos.']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'should_retry' => true,
+            'retry_reason' => 'The request is understandable, but needs a more polite A1 phrase here.',
+            'feedback' => 'I understood you, but this situation needs a polite request.',
+            'normalized_transcript' => 'Noriu kavos.',
+            'suggested_response' => 'Norėčiau kavos, prašau.',
+            'corrected' => 'Norėčiau kavos, prašau.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'You answered the goal, but should retry with a more natural polite phrase.',
+            'improvement_focus' => 'vocabulary',
+            'scores' => [
+                'grammar' => 70,
+                'vocabulary' => 62,
+                'cohesion' => 68,
+                'task_completion' => 82,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, RestaurantScenarioSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'restoranas',
+            'scene_id' => 'atvykimas',
+            'goal_id' => 'ask-table',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'Order coffee politely.',
+            'example' => 'Norėčiau kavos, prašau.',
+            'context' => 'At a cafe.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('transcript', 'Noriu kavos.')
+            ->assertJsonPath('normalized_transcript', 'Noriu kavos.')
+            ->assertJsonPath('pass', true)
+            ->assertJsonPath('can_continue', false)
+            ->assertJsonPath('should_retry', true)
+            ->assertJsonPath('retry_reason', 'The request is understandable, but needs a more polite A1 phrase here.')
+            ->assertJsonPath('corrected', 'Noriu kavos.')
+            ->assertJsonPath('suggested_response', 'Norėčiau kavos, prašau.')
+            ->assertJsonPath('dialogue.should_complete', false);
+
+        $this->assertDatabaseHas('speaking_attempts', [
+            'transcript' => 'Noriu kavos.',
+            'passed' => false,
+            'corrected_text' => 'Noriu kavos.',
+            'metadata->judge_pass' => true,
+            'metadata->can_continue' => false,
+            'metadata->should_retry' => true,
+            'metadata->suggested_response' => 'Norėčiau kavos, prašau.',
+        ]);
     }
 
     public function test_speech_check_keeps_authored_progression_even_when_utterance_mentions_later_intent(): void

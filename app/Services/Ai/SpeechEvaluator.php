@@ -12,7 +12,7 @@ use Laravel\Ai\Transcription;
 class SpeechEvaluator implements SpeechEvaluatorContract
 {
     /**
-     * @return array{transcript: string, pass: bool, feedback: string, corrected: string, suggestion: string, communication: array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
+     * @return array{transcript: string, normalized_transcript: string, pass: bool, can_continue: bool, should_retry: bool, retry_reason: string, feedback: string, corrected: string, suggested_response: string, suggestion: string, communication: array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string|null, evaluation_provider: string|null, evaluation_model: string|null}
      */
     public function evaluate(
         UploadedFile $audio,
@@ -33,9 +33,14 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         if ($transcript === '') {
             return [
                 'transcript' => '',
+                'normalized_transcript' => '',
                 'pass' => false,
+                'can_continue' => false,
+                'should_retry' => true,
+                'retry_reason' => 'No speech was detected.',
                 'feedback' => 'I could not hear anything, try speaking a little louder.',
                 'corrected' => '',
+                'suggested_response' => $example,
                 'suggestion' => $example,
                 'communication' => [
                     'intent_match' => 'off_topic',
@@ -79,14 +84,24 @@ class SpeechEvaluator implements SpeechEvaluatorContract
 
         $scores = $this->scoresFromVerdict($verdict);
         $overallScore = $this->overallScore($scores);
+        $pass = (bool) ($verdict['pass'] ?? false);
+        $shouldRetry = (bool) ($verdict['should_retry'] ?? (! $pass));
+        $canContinue = $pass && ! $shouldRetry;
+        $normalizedTranscript = trim((string) ($verdict['normalized_transcript'] ?? $normalizedTranscript));
+        $suggestedResponse = trim((string) ($verdict['suggested_response'] ?? ($example !== '' ? $example : ($verdict['corrected'] ?? ''))));
 
         return [
             'transcript' => $transcript,
-            'pass' => (bool) ($verdict['pass'] ?? false),
+            'normalized_transcript' => $normalizedTranscript,
+            'pass' => $pass,
+            'can_continue' => $canContinue,
+            'should_retry' => $shouldRetry,
+            'retry_reason' => $shouldRetry ? $this->speechFirstFeedback((string) ($verdict['retry_reason'] ?? 'Try once more before continuing.'), $example) : '',
             'feedback' => $this->speechFirstFeedback((string) ($verdict['feedback'] ?? 'Try that again.'), $example),
-            'corrected' => (string) ($verdict['corrected'] ?? ''),
-            'suggestion' => $example,
-            'communication' => $this->communicationFromVerdict($verdict, (bool) ($verdict['pass'] ?? false)),
+            'corrected' => $normalizedTranscript,
+            'suggested_response' => $suggestedResponse,
+            'suggestion' => $suggestedResponse,
+            'communication' => $this->communicationFromVerdict($verdict, $pass),
             'scores' => $scores,
             'overall_score' => $overallScore,
             'attempt_cefr_level' => (string) ($verdict['attempt_cefr_level'] ?? CefrLevel::estimateFromScore($overallScore)->value),

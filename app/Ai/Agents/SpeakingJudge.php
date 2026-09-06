@@ -24,7 +24,7 @@ class SpeakingJudge implements Agent, HasStructuredOutput
             .'Fail only if the answer does not satisfy the requested goal, is off-topic, not in the target language, or unintelligible. '
             .'The learner spoke; they did not type. Never mention spelling, capitalization, casing, punctuation, writing, or typing in feedback. '
             .'Treat merged words, missing punctuation, and lower-case names in the transcript as transcription artifacts unless spoken meaning is unclear. '
-            .'If the transcript has a likely speech-to-text artifact, give a natural spoken version without criticizing the learner for text formatting. '
+            .'If the transcript has a likely speech-to-text artifact, give a conservative spoken interpretation without criticizing the learner for text formatting. '
             .'Do not correct a personal name unless the task requires a specific name; preserve the likely intended name where possible. '
             .'Score task completion by how well the spoken answer satisfies the current goal, not by exact phrase matching. '
             .'The prompt includes a content CEFR level; judge grammar, vocabulary range, cohesion, and task completion relative to that level. '
@@ -34,7 +34,12 @@ class SpeakingJudge implements Agent, HasStructuredOutput
             .'Use null for pronunciation unless audio-level evidence is explicitly available. '
             .'Estimate the attempt CEFR level as pre_a1, a1, a2, b1, b2, c1, or c2. '
             .'Feedback must be one short friendly English sentence about spoken meaning, pronunciation, grammar, vocabulary, or natural phrasing. '
-            ."Corrected must be a natural spoken target-language version of the learner's answer. "
+            .'normalized_transcript must be a conservative target-language interpretation of what the learner most likely said; do not add new meaning. '
+            .'For backward compatibility, set corrected to the same value as normalized_transcript. '
+            .'suggested_response must be a natural target-language phrase the learner can try next for this exact goal. '
+            .'Set should_retry to true when the answer is understandable but too rough, incomplete, off-topic, mostly outside the target language, or fails strict mode. '
+            .'Set should_retry to false when the conversation should continue. '
+            .'retry_reason must be empty when should_retry is false, otherwise one short English reason. '
             .'Set intent_match to full when the goal is clearly answered, partial when the answer is related but incomplete, and off_topic when it misses the goal. '
             .'Set went_off_script to true when the learner adds extra information or answers in an unexpected but still conversationally acceptable way. '
             .'Use communication_note to explain the communicative result in one short English sentence. '
@@ -49,6 +54,10 @@ class SpeakingJudge implements Agent, HasStructuredOutput
         return [
             'pass' => $schema->boolean()->required(),
             'feedback' => $schema->string()->required(),
+            'normalized_transcript' => $schema->string()->required(),
+            'suggested_response' => $schema->string()->required(),
+            'should_retry' => $schema->boolean()->required(),
+            'retry_reason' => $schema->string()->required(),
             'corrected' => $schema->string()->required(),
             'intent_match' => $schema->string()->enum(['full', 'partial', 'off_topic'])->required(),
             'understood_meaning' => $schema->boolean()->required(),

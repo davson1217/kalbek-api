@@ -79,8 +79,10 @@ class SpeechCheckController extends Controller
             $targetLanguageName,
         );
 
+        $canContinue = (bool) ($result['can_continue'] ?? ($result['pass'] && ! ($result['should_retry'] ?? false)));
+
         $scenario->loadMissing(['scenes.goals.nextScene', 'scenes.npcLines.triggerGoal']);
-        $dialogue = $orchestrator->decide($scenario, $scene, $goal, $result['transcript'], $result['pass']);
+        $dialogue = $orchestrator->decide($scenario, $scene, $goal, $result['transcript'], $canContinue);
 
         SpeakingAttempt::query()->create([
             'user_id' => $user->id,
@@ -89,7 +91,7 @@ class SpeechCheckController extends Controller
             'goal_id' => $goal->id,
             'status' => SpeakingAttemptStatus::Graded,
             'transcript' => $result['transcript'],
-            'passed' => $result['pass'],
+            'passed' => $canContinue,
             'score' => $result['overall_score'],
             'grammar_score' => $result['scores']['grammar'],
             'vocabulary_score' => $result['scores']['vocabulary'],
@@ -101,7 +103,7 @@ class SpeechCheckController extends Controller
             'evaluation_provider' => $result['evaluation_provider'],
             'evaluation_model' => $result['evaluation_model'],
             'feedback' => $result['feedback'],
-            'corrected_text' => $result['corrected'],
+            'corrected_text' => $result['normalized_transcript'] ?? $result['corrected'],
             'metadata' => [
                 'intent' => $data['intent'],
                 'example' => $data['example'] ?? '',
@@ -112,6 +114,12 @@ class SpeechCheckController extends Controller
                 'target_language_code' => $targetLanguageCode,
                 'target_language_name' => $targetLanguageName,
                 'audio_readiness' => $data['audio_readiness'] ?? null,
+                'judge_pass' => $result['pass'],
+                'can_continue' => $canContinue,
+                'should_retry' => (bool) ($result['should_retry'] ?? (! $canContinue)),
+                'retry_reason' => $result['retry_reason'] ?? '',
+                'normalized_transcript' => $result['normalized_transcript'] ?? $result['corrected'],
+                'suggested_response' => $result['suggested_response'] ?? $result['suggestion'] ?? '',
                 'communication' => $result['communication'],
                 'dialogue' => $dialogue,
             ],
@@ -119,6 +127,6 @@ class SpeechCheckController extends Controller
             'graded_at' => now(),
         ]);
 
-        return response()->json([...$result, 'dialogue' => $dialogue]);
+        return response()->json([...$result, 'can_continue' => $canContinue, 'dialogue' => $dialogue]);
     }
 }
