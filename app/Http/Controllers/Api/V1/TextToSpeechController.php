@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Contracts\TextToSpeechSynthesizer;
+use App\Exceptions\AudioGenerationInProgress;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\TextToSpeechRequest;
 use App\Models\Language;
@@ -15,12 +16,19 @@ class TextToSpeechController extends Controller
         $data = $request->validated();
         $text = trim((string) $data['text']);
         $language = Language::query()->where('code', $data['language'] ?? 'lt')->first();
-        $audio = $synthesizer->synthesize(
-            $text,
-            $language?->code ?? 'lt',
-            $language?->name ?? 'Lithuanian',
-            $language?->default_voice,
-        );
+
+        try {
+            $audio = $synthesizer->synthesize(
+                $text,
+                $language?->code ?? 'lt',
+                $language?->name ?? 'Lithuanian',
+                $language?->default_voice,
+            );
+        } catch (AudioGenerationInProgress $exception) {
+            return response($exception->getMessage(), 503, [
+                'retry-after' => '3',
+            ]);
+        }
 
         return $this->audioResponse($request, $audio->content, $audio->mimeType);
     }

@@ -115,6 +115,21 @@ services:
     networks:
       - kalbek
 
+  redisinsight:
+    image: redis/redisinsight:latest
+    container_name: kalbek-api-redisinsight
+    restart: unless-stopped
+    profiles:
+      - dev
+    ports:
+      - "${FORWARD_REDISINSIGHT_PORT:-5540}:5540"
+    volumes:
+      - redisinsight-data:/data
+    depends_on:
+      - redis
+    networks:
+      - kalbek
+
   mailpit:
     image: axllent/mailpit:latest
     container_name: kalbek-api-mailpit
@@ -133,3 +148,4 @@ volumes:
   mysql-data:
   node-modules:
   redis-data:
+  redisinsight-data:

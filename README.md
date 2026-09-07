@@ -50,6 +50,7 @@ The local services are available at:
 - Mailpit: `http://localhost:8025`
 - MySQL: `localhost:3307`
 - Redis: `localhost:6380`
+- RedisInsight: `http://localhost:5540` after running `make redisinsight`
 
 ## Common Commands
 
@@ -68,8 +69,13 @@ make test           # Run PHPUnit
 make npm-build      # Build the Inertia CMS frontend
 make format         # Format PHP with Pint
 make lint           # Check PHP formatting with Pint
+make redisinsight   # Start the optional RedisInsight GUI
 php artisan kalbek:production-check --fail  # Validate launch configuration
 ```
+
+RedisInsight is dev-only and runs through the Docker Compose `dev` profile. After
+starting it, connect to Redis with host `redis` and port `6379` from inside the
+RedisInsight UI.
 
 ## Production Readiness
 

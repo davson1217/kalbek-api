@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Ai\Agents\SpeakingJudge;
+use App\Models\GeneratedAudio;
 use App\Models\Goal;
 use App\Models\LearnerLanguageLevel;
 use App\Models\NpcLine;
@@ -15,6 +16,7 @@ use Database\Seeders\CharacterSeeder;
 use Database\Seeders\RestaurantScenarioSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Audio;
@@ -28,6 +30,7 @@ class AiSpeechApiTest extends TestCase
 
     public function test_text_to_speech_generates_and_caches_audio(): void
     {
+        Cache::flush();
         Storage::fake('local');
         Audio::fake([base64_encode('fake-audio-content')]);
 
@@ -44,12 +47,71 @@ class AiSpeechApiTest extends TestCase
             'text' => 'Laba diena',
             'bytes' => strlen('fake-audio-content'),
         ]);
+        $this->assertTrue(Cache::has($this->ttsMetadataCacheKey('Laba diena')));
 
         $second = $this->get('/api/v1/tts?text=Laba%20diena');
 
         $second
             ->assertOk()
             ->assertContent('fake-audio-content');
+    }
+
+    public function test_text_to_speech_hydrates_redis_metadata_cache_from_database(): void
+    {
+        Cache::flush();
+        Storage::fake('local');
+        Storage::disk('local')->put('generated-audio/existing.mp3', 'cached-db-audio');
+        Audio::fake([base64_encode('provider-audio')]);
+
+        GeneratedAudio::factory()->create([
+            'cache_key' => $this->ttsCacheKey('Laba diena'),
+            'text' => 'Laba diena',
+            'voice' => 'default-female',
+            'model' => config('services.kalbek.tts_model', 'gpt-4o-mini-tts'),
+            'disk' => 'local',
+            'path' => 'generated-audio/existing.mp3',
+            'mime_type' => 'audio/mpeg',
+            'last_used_at' => null,
+        ]);
+
+        $response = $this->get('/api/v1/tts?text=Laba%20diena');
+
+        $response
+            ->assertOk()
+            ->assertContent('cached-db-audio');
+        $this->assertTrue(Cache::has($this->ttsMetadataCacheKey('Laba diena')));
+        Audio::assertNothingGenerated();
+    }
+
+    public function test_text_to_speech_serves_from_metadata_cache_without_provider_call(): void
+    {
+        Cache::flush();
+        Storage::fake('local');
+        Storage::disk('local')->put('generated-audio/existing.mp3', 'cached-redis-audio');
+        Audio::fake([base64_encode('provider-audio')]);
+
+        GeneratedAudio::factory()->create([
+            'cache_key' => $this->ttsCacheKey('Laba diena'),
+            'text' => 'Laba diena',
+            'voice' => 'default-female',
+            'model' => config('services.kalbek.tts_model', 'gpt-4o-mini-tts'),
+            'disk' => 'local',
+            'path' => 'generated-audio/existing.mp3',
+            'mime_type' => 'audio/mpeg',
+            'last_used_at' => null,
+        ]);
+        Cache::put($this->ttsMetadataCacheKey('Laba diena'), [
+            'disk' => 'local',
+            'path' => 'generated-audio/existing.mp3',
+            'mime_type' => 'audio/mpeg',
+        ]);
+
+        $response = $this->get('/api/v1/tts?text=Laba%20diena');
+
+        $response
+            ->assertOk()
+            ->assertContent('cached-redis-audio');
+        Audio::assertNothingGenerated();
     }
 
     public function test_text_to_speech_validates_text(): void
@@ -76,6 +138,7 @@ class AiSpeechApiTest extends TestCase
 
     public function test_text_to_speech_supports_byte_range_requests_for_mobile_browsers(): void
     {
+        Cache::flush();
         Storage::fake('local');
         Audio::fake([base64_encode('fake-audio-content')]);
 
@@ -92,6 +155,7 @@ class AiSpeechApiTest extends TestCase
 
     public function test_text_to_speech_rejects_invalid_byte_ranges(): void
     {
+        Cache::flush();
         Storage::fake('local');
         Audio::fake([base64_encode('fake-audio-content')]);
 
@@ -784,5 +848,17 @@ class AiSpeechApiTest extends TestCase
             ->assertJsonPath('dialogue.should_complete', false)
             ->assertJsonPath('dialogue.reason', 'Advance by the selected authored goal.');
 
+    }
+
+    private function ttsCacheKey(string $text, string $languageCode = 'lt', string $voice = 'default-female'): string
+    {
+        $model = config('services.kalbek.tts_model', 'gpt-4o-mini-tts');
+
+        return hash('sha256', "{$languageCode}|{$model}|{$voice}|{$text}");
+    }
+
+    private function ttsMetadataCacheKey(string $text): string
+    {
+        return 'tts:generated-audio:'.$this->ttsCacheKey($text);
     }
 }

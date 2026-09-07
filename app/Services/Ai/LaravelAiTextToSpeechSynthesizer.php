@@ -4,7 +4,10 @@ namespace App\Services\Ai;
 
 use App\Contracts\TextToSpeechSynthesizer;
 use App\Data\SynthesizedAudio;
+use App\Exceptions\AudioGenerationInProgress;
 use App\Models\GeneratedAudio;
+use Illuminate\Contracts\Cache\LockTimeoutException;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Audio;
 
@@ -16,16 +19,37 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
         $model = config('services.kalbek.tts_model', 'gpt-4o-mini-tts');
         $cacheKey = hash('sha256', "{$languageCode}|{$model}|{$voice}|{$text}");
 
-        $cached = GeneratedAudio::query()->where('cache_key', $cacheKey)->first();
+        if ($cached = $this->cachedAudio($cacheKey)) {
+            return $cached;
+        }
 
-        if ($cached && Storage::disk($cached->disk)->exists($cached->path)) {
-            $cached->update(['last_used_at' => now()]);
-            $audio = $this->browserPlayableAudio(
-                Storage::disk($cached->disk)->get($cached->path),
-                $cached->mime_type,
+        try {
+            return Cache::lock(
+                "tts:generate:{$cacheKey}",
+                (int) config('services.kalbek.tts_generation_lock_seconds', 60),
+            )->block(
+                (int) config('services.kalbek.tts_generation_lock_wait_seconds', 50),
+                fn (): SynthesizedAudio => $this->synthesizeAfterLock(
+                    $cacheKey,
+                    $languageName,
+                    $model,
+                    $text,
+                    $voice,
+                ),
             );
+        } catch (LockTimeoutException) {
+            if ($cached = $this->cachedAudio($cacheKey)) {
+                return $cached;
+            }
 
-            return new SynthesizedAudio($audio->content, $audio->mimeType);
+            throw new AudioGenerationInProgress;
+        }
+    }
+
+    private function synthesizeAfterLock(string $cacheKey, string $languageName, string $model, string $text, string $voice): SynthesizedAudio
+    {
+        if ($cached = $this->cachedAudio($cacheKey)) {
+            return $cached;
         }
 
         $audio = Audio::of($text)
@@ -42,7 +66,7 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
 
         Storage::disk('local')->put($path, $content);
 
-        GeneratedAudio::query()->updateOrCreate(
+        $generatedAudio = GeneratedAudio::query()->updateOrCreate(
             ['cache_key' => $cacheKey],
             [
                 'text' => $text,
@@ -56,8 +80,71 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
                 'last_used_at' => now(),
             ],
         );
+        $this->putCachedMetadata($generatedAudio);
 
         return new SynthesizedAudio($content, $mimeType);
+    }
+
+    private function cachedAudio(string $cacheKey): ?SynthesizedAudio
+    {
+        $metadata = Cache::get($this->metadataCacheKey($cacheKey));
+
+        if (! is_array($metadata)) {
+            $generatedAudio = GeneratedAudio::query()->where('cache_key', $cacheKey)->first();
+
+            if (! $generatedAudio) {
+                return null;
+            }
+
+            $metadata = $this->metadata($generatedAudio);
+            $this->putCachedMetadata($generatedAudio);
+        }
+
+        $disk = (string) ($metadata['disk'] ?? 'local');
+        $path = (string) ($metadata['path'] ?? '');
+
+        if ($path === '' || ! Storage::disk($disk)->exists($path)) {
+            Cache::forget($this->metadataCacheKey($cacheKey));
+
+            return null;
+        }
+
+        GeneratedAudio::query()
+            ->where('cache_key', $cacheKey)
+            ->update(['last_used_at' => now()]);
+
+        $audio = $this->browserPlayableAudio(
+            Storage::disk($disk)->get($path),
+            (string) ($metadata['mime_type'] ?? 'audio/mpeg'),
+        );
+
+        return new SynthesizedAudio($audio->content, $audio->mimeType);
+    }
+
+    private function putCachedMetadata(GeneratedAudio $generatedAudio): void
+    {
+        Cache::put(
+            $this->metadataCacheKey($generatedAudio->cache_key),
+            $this->metadata($generatedAudio),
+            (int) config('services.kalbek.tts_metadata_cache_ttl_seconds', 86400),
+        );
+    }
+
+    /**
+     * @return array{disk: string, path: string, mime_type: string}
+     */
+    private function metadata(GeneratedAudio $generatedAudio): array
+    {
+        return [
+            'disk' => $generatedAudio->disk,
+            'path' => $generatedAudio->path,
+            'mime_type' => $generatedAudio->mime_type,
+        ];
+    }
+
+    private function metadataCacheKey(string $cacheKey): string
+    {
+        return "tts:generated-audio:{$cacheKey}";
     }
 
     private function browserPlayableAudio(string $content, string $mimeType): SynthesizedAudio

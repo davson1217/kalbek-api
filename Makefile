@@ -2,7 +2,7 @@ COMPOSE=docker compose
 APP=$(COMPOSE) exec app
 VITE=$(COMPOSE) exec vite
 
-.PHONY: setup build start build-start build-and-start restart stop logs shell key migrate fresh seed test lint format npm-install npm-build npm-dev artisan
+.PHONY: setup build start build-start build-and-start restart stop logs shell key migrate fresh seed test lint format npm-install npm-build npm-dev redisinsight artisan
 
 setup:
 	test -f .env || cp .env.example .env
@@ -62,6 +62,9 @@ npm-build:
 
 npm-dev:
 	$(COMPOSE) up vite
+
+redisinsight:
+	$(COMPOSE) --profile dev up -d redisinsight
 
 artisan:
 	$(APP) php artisan $(cmd)

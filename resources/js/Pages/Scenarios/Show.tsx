@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Edit3, PlayCircle, Plus } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, CheckCircle2, Edit3, PlayCircle, Plus, Volume2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Modal } from '../../Components/Cms/Modal';
@@ -65,6 +65,8 @@ export default function ScenarioShow({ scenario, auditIssues, characters, langua
 
                 <FlowAuditPanel issues={auditIssues} />
 
+                <AudioPreparationPanel scenario={scenario} />
+
                 <ScenarioPreview scenario={scenario} />
 
                 <section className="space-y-3">
@@ -97,6 +99,67 @@ export default function ScenarioShow({ scenario, auditIssues, characters, langua
                 <SceneForm action={`/cms/scenarios/${scenario.slug}/scenes`} levels={levels} onSuccess={() => setCreatingScene(false)} />
             </Modal>
         </CmsLayout>
+    );
+}
+
+function AudioPreparationPanel({ scenario }: { scenario: ScenarioDetail }) {
+    const openingLineCount = scenario.scenes.reduce((total, scene) => total + scene.lines.filter((line) => !line.trigger_goal_db_id).length, 0);
+    const goalReplyIds = new Set(scenario.scenes.flatMap((scene) => scene.goals.flatMap((goal) => goal.response_lines.map((line) => line.id))));
+    const goalReplyCount = goalReplyIds.size;
+    const propLineCount = scenario.scenes.reduce((total, scene) => total + scene.props.filter((prop) => prop.target_text).length, 0);
+    const totalItems = openingLineCount + goalReplyCount + propLineCount;
+
+    return (
+        <section className="rounded-3xl border border-sky-100 bg-sky-50/80 p-5 shadow-lg shadow-sky-100/50">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-3">
+                    <span className="mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white text-sky-700 shadow-sm">
+                        <Volume2 className="size-5" />
+                    </span>
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-700">Audio preparation</p>
+                        <h2 className="mt-1 text-lg font-black text-sky-950">Pre-generation skeleton</h2>
+                        <p className="mt-1 max-w-3xl text-sm leading-6 text-sky-900">
+                            Future releases can generate and cache audio for selected published content before learners open it. This placeholder keeps the workflow visible without spending TTS tokens yet.
+                        </p>
+                    </div>
+                </div>
+                <button
+                    type="button"
+                    disabled
+                    className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full border border-sky-200 bg-white/70 px-4 py-2 text-sm font-black text-sky-500 opacity-70 shadow-sm"
+                >
+                    <Volume2 className="size-4" /> Generate audio
+                </button>
+            </div>
+
+            <div className="mt-4 grid gap-3 md:grid-cols-4">
+                <AudioMetric label="Opening lines" value={openingLineCount} />
+                <AudioMetric label="Goal replies" value={goalReplyCount} />
+                <AudioMetric label="Props/menu text" value={propLineCount} />
+                <AudioMetric label="Total candidates" value={totalItems} />
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-white/80 bg-white/75 p-4">
+                <div className="flex flex-wrap gap-2">
+                    <StatusBadge tone="amber">Not implemented</StatusBadge>
+                    <StatusBadge>Lazy cache remains active</StatusBadge>
+                    <StatusBadge>{scenario.status} content</StatusBadge>
+                </div>
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                    Intended long-term behavior: editors explicitly generate audio for published scenarios, Redis queues run the work in the background, Redis locks prevent duplicate token spend, and stale audio is regenerated only when content or voice settings change.
+                </p>
+            </div>
+        </section>
+    );
+}
+
+function AudioMetric({ label, value }: { label: string; value: number }) {
+    return (
+        <div className="rounded-2xl border border-white/80 bg-white/75 p-4 shadow-sm">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-500">{label}</p>
+            <p className="mt-1 text-2xl font-black tracking-tight text-slate-950">{value}</p>
+        </div>
     );
 }
 
