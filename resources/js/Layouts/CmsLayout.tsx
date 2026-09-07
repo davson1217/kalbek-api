@@ -32,7 +32,7 @@ export function CmsLayout({ children }: PropsWithChildren) {
                 <nav className="space-y-1 px-3 py-4">
                     {nav.map((item) => {
                         const Icon = item.icon;
-                        const active = path === item.href || path.startsWith(`${item.href}/`);
+                        const active = isActiveNavItem(path, item.href);
 
                         return (
                             <Link
@@ -68,15 +68,23 @@ export function CmsLayout({ children }: PropsWithChildren) {
                         </button>
                     </div>
                     <div className="mt-3 flex gap-2 md:hidden">
-                        {nav.map((item) => (
+                        {nav.map((item) => {
+                            const active = isActiveNavItem(path, item.href);
+
+                            return (
                             <Link
                                 key={item.href}
                                 href={item.href}
-                                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold shadow-sm"
+                                className={`rounded-full border px-3 py-1.5 text-xs font-bold shadow-sm ${
+                                    active
+                                        ? 'border-slate-950 bg-slate-950 text-white'
+                                        : 'border-slate-200 bg-white text-slate-700'
+                                }`}
                             >
                                 {item.label}
                             </Link>
-                        ))}
+                            );
+                        })}
                     </div>
                 </header>
                 <div className="px-4 py-6 md:px-8">
@@ -90,6 +98,12 @@ export function CmsLayout({ children }: PropsWithChildren) {
             </section>
         </main>
     );
+}
+
+function isActiveNavItem(path: string, href: string): boolean {
+    if (href === '/cms') return path === href;
+
+    return path === href || path.startsWith(`${href}/`);
 }
 
 export function FieldError({ message }: { message?: string }) {

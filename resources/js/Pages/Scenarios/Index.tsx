@@ -49,12 +49,14 @@ export default function ScenariosIndex({ scenarios, characters, languages, statu
                             <p className="text-sm text-slate-500">{filteredScenarios.length} of {scenarios.length} scenarios shown</p>
                         </div>
                         <label className="relative w-full md:max-w-sm">
-                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                            <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+                                <Search className="size-4 text-slate-400" />
+                            </span>
                             <input
                                 value={query}
                                 onChange={(event) => setQuery(event.target.value)}
                                 placeholder="Search scenarios"
-                                className="w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
+                                className="h-10 w-full rounded-full border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm outline-none transition focus:border-cyan-500 focus:ring-4 focus:ring-cyan-100"
                             />
                         </label>
                     </div>
