@@ -70,6 +70,7 @@ export interface ScenarioSummary {
     character: string | null;
     scenes_count: number | null;
     updated_at: string | null;
+    translations: TranslationMap;
 }
 
 export interface ScenarioDetail extends ScenarioSummary {
@@ -91,9 +92,11 @@ export interface ScenarioAuditIssue {
 export interface SceneRecord {
     id: number;
     slug: string;
+    title: string;
     setting: string;
     cefr_level: string | null;
     sort_order: number;
+    translations: TranslationMap;
     lines: NpcLineRecord[];
     goals: GoalRecord[];
     props: ScenePropRecord[];
@@ -110,6 +113,7 @@ export interface GoalRecord {
     next_scene_slug: string | null;
     response_lines: NpcLineRecord[];
     sort_order: number;
+    translations: TranslationMap;
 }
 
 export interface NpcLineRecord {
@@ -121,6 +125,7 @@ export interface NpcLineRecord {
     trigger_goal_db_id: number | null;
     priority: number;
     sort_order: number;
+    translations: TranslationMap;
 }
 
 export interface ScenePropRecord {
@@ -131,4 +136,7 @@ export interface ScenePropRecord {
     price: string | null;
     metadata: Record<string, unknown> | null;
     sort_order: number;
+    translations: TranslationMap;
 }
+
+export type TranslationMap = Record<string, Record<string, string>>;

@@ -13,6 +13,7 @@ class ScenarioSeeder extends Seeder
             PharmacyVisitScenarioSeeder::class,
             A1ScenarioSeeder::class,
             EnglishShopScenarioSeeder::class,
+            ContentTranslationSeeder::class,
         ]);
     }
 }

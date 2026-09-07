@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\CefrLevel;
+use App\Models\Concerns\HasContentTranslations;
 use Database\Factories\NpcLineFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -21,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class NpcLine extends Model
 {
     /** @use HasFactory<NpcLineFactory> */
+    use HasContentTranslations;
     use HasFactory;
 
     public function scene(): BelongsTo

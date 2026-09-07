@@ -58,6 +58,12 @@ class SpeechCheckController extends Controller
 
         $targetLanguageCode = $scenario->language?->code ?? 'lt';
         $targetLanguageName = $scenario->language?->name ?? 'Lithuanian';
+        $profile = $user->profile()->first();
+        $feedbackLanguageCode = $profile?->app_language ?? 'en';
+        $feedbackLanguageName = match ($feedbackLanguageCode) {
+            'lt' => 'Lithuanian',
+            default => 'English',
+        };
         $contentCefrLevel = $goal->cefr_level?->value
             ?? $scene->cefr_level?->value
             ?? $scenario->cefr_level?->value
@@ -77,6 +83,8 @@ class SpeechCheckController extends Controller
             $learnerCefrLevel,
             $targetLanguageCode,
             $targetLanguageName,
+            $feedbackLanguageCode,
+            $feedbackLanguageName,
         );
 
         $canContinue = (bool) ($result['can_continue'] ?? ($result['pass'] && ! ($result['should_retry'] ?? false)));
@@ -113,6 +121,8 @@ class SpeechCheckController extends Controller
                 'learner_cefr_level' => $learnerCefrLevel,
                 'target_language_code' => $targetLanguageCode,
                 'target_language_name' => $targetLanguageName,
+                'feedback_language_code' => $feedbackLanguageCode,
+                'feedback_language_name' => $feedbackLanguageName,
                 'audio_readiness' => $data['audio_readiness'] ?? null,
                 'judge_pass' => $result['pass'],
                 'can_continue' => $canContinue,

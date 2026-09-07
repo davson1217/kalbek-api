@@ -31,6 +31,8 @@ class ProfileApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.display_name', 'Ada')
             ->assertJsonPath('data.avatar_character.id', 'gabija')
+            ->assertJsonPath('data.app_language', 'en')
+            ->assertJsonPath('data.show_translations', true)
             ->assertJsonPath('data.strict_speech_mode', false)
             ->assertJsonPath('data.language_level.current_cefr_level', 'pre_a1')
             ->assertJsonPath('data.language_level.confidence_score', 0)
@@ -86,17 +88,23 @@ class ProfileApiTest extends TestCase
             'display_name' => 'Adele',
             'avatar_character' => 'rasa',
             'strict_speech_mode' => true,
+            'app_language' => 'lt',
+            'show_translations' => false,
         ]);
 
         $response
             ->assertOk()
             ->assertJsonPath('data.display_name', 'Adele')
             ->assertJsonPath('data.avatar_character.id', 'rasa')
+            ->assertJsonPath('data.app_language', 'lt')
+            ->assertJsonPath('data.show_translations', false)
             ->assertJsonPath('data.strict_speech_mode', true);
 
         $this->assertDatabaseHas('profiles', [
             'user_id' => $user->id,
             'display_name' => 'Adele',
+            'app_language' => 'lt',
+            'show_translations' => false,
         ]);
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
@@ -113,5 +121,16 @@ class ProfileApiTest extends TestCase
             'avatar_character' => 'missing-character',
         ])->assertUnprocessable()
             ->assertJsonValidationErrors('avatar_character');
+    }
+
+    public function test_profile_app_language_must_be_supported(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $this->patchJson('/api/v1/profile', [
+            'app_language' => 'fr',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors('app_language');
     }
 }

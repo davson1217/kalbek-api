@@ -30,13 +30,14 @@ export function ScenePanel({ auditIssues, goalOptions, levels, scenario, scene, 
             <button type="button" onClick={() => setOpen((value) => !value)} className="flex w-full items-start justify-between gap-4 p-5 text-left">
                 <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                        <h2 className="text-xl font-black tracking-tight text-slate-950">{scene.slug}</h2>
+                        <h2 className="text-xl font-black tracking-tight text-slate-950">{scene.title}</h2>
                         <StatusBadge tone="cyan">{scene.cefr_level?.toUpperCase() ?? 'INHERIT'}</StatusBadge>
                         <StatusBadge>{scene.goals.length} goals</StatusBadge>
                         <StatusBadge>{scene.lines.length} lines</StatusBadge>
                         {criticalIssueCount > 0 ? <StatusBadge tone="rose">{criticalIssueCount} critical</StatusBadge> : null}
                         {warningIssueCount > 0 ? <StatusBadge tone="amber">{warningIssueCount} warnings</StatusBadge> : null}
                     </div>
+                    <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">{scene.slug}</p>
                     <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{scene.setting || 'No setting has been written yet.'}</p>
                 </div>
                 <ChevronDown className={`mt-1 size-5 shrink-0 text-slate-500 transition ${open ? 'rotate-180' : ''}`} />

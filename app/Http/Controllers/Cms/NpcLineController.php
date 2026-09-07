@@ -7,24 +7,29 @@ use App\Http\Controllers\Controller;
 use App\Models\NpcLine;
 use App\Models\Scenario;
 use App\Models\Scene;
+use App\Services\Content\SyncContentTranslations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class NpcLineController extends Controller
 {
-    public function store(Request $request, Scenario $scenario, Scene $scene): RedirectResponse
+    public function store(Request $request, Scenario $scenario, Scene $scene, SyncContentTranslations $translations): RedirectResponse
     {
         $this->ensureScene($scenario, $scene);
-        $scene->npcLines()->create($this->validated($request, $scene));
+        $data = $this->validated($request, $scene, translations: $translations);
+        $line = $scene->npcLines()->create($this->contentData($data));
+        $translations->sync($line, $data['translations'] ?? [], ['support_translation']);
 
         return back()->with('success', 'NPC line created.');
     }
 
-    public function update(Request $request, Scenario $scenario, Scene $scene, NpcLine $line): RedirectResponse
+    public function update(Request $request, Scenario $scenario, Scene $scene, NpcLine $line, SyncContentTranslations $translations): RedirectResponse
     {
         $this->ensureLine($scenario, $scene, $line);
-        $line->update($this->validated($request, $scene));
+        $data = $this->validated($request, $scene, translations: $translations);
+        $line->update($this->contentData($data));
+        $translations->sync($line, $data['translations'] ?? [], ['support_translation']);
 
         return back()->with('success', 'NPC line updated.');
     }
@@ -37,7 +42,7 @@ class NpcLineController extends Controller
         return back()->with('success', 'NPC line deleted.');
     }
 
-    private function validated(Request $request, Scene $scene): array
+    private function validated(Request $request, Scene $scene, ?SyncContentTranslations $translations = null): array
     {
         return $request->validate([
             'target_text' => ['required', 'string', 'max:1000'],
@@ -49,7 +54,15 @@ class NpcLineController extends Controller
             ],
             'priority' => ['required', 'integer', 'min:0', 'max:1000'],
             'sort_order' => ['required', 'integer', 'min:0'],
+            ...($translations?->rules(['support_translation']) ?? []),
         ]);
+    }
+
+    private function contentData(array $data): array
+    {
+        unset($data['translations']);
+
+        return $data;
     }
 
     private function ensureScene(Scenario $scenario, Scene $scene): void

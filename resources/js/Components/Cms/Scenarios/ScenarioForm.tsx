@@ -4,6 +4,7 @@ import { Save } from 'lucide-react';
 import { blankOptions, SelectField, Textarea, TextField } from '../FormControls';
 import { PrimaryButton } from '../PageChrome';
 import type { CharacterOption, LanguageOption, ScenarioDetail, ScenarioSummary } from '../../../types';
+import { TranslationFields } from './ContentForms';
 
 type ScenarioFormRecord = ScenarioDetail | ScenarioSummary;
 
@@ -22,6 +23,7 @@ export function ScenarioForm({ action, characters, languages, levels, method = '
         status: scenario?.status ?? 'draft',
         is_free: scenario?.is_free ?? false,
         sort_order: scenario?.sort_order ?? 0,
+        translations: scenario?.translations ?? {},
     });
 
     return (
@@ -59,6 +61,7 @@ export function ScenarioForm({ action, characters, languages, levels, method = '
             <div className="md:col-span-2">
                 <Textarea label="Description" placeholder="The learner arrives at a restaurant, asks for a table, reads the menu, and places a simple order." help="A short editor-facing summary of what the learner practices in this scenario." rows={4} value={form.data.description} onChange={(value) => form.setData('description', value)} error={form.errors.description} />
             </div>
+            <TranslationFields fields={['title', 'subtitle', 'description']} translations={form.data.translations} onChange={(translations) => form.setData('translations', translations)} />
             <div className="md:col-span-2">
                 <PrimaryButton type="submit" icon={Save} disabled={form.processing}>{scenario ? 'Save scenario' : 'Create scenario'}</PrimaryButton>
             </div>

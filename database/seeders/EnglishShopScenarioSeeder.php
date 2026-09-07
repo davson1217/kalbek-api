@@ -54,6 +54,7 @@ class EnglishShopScenarioSeeder extends Seeder
             $scenario->scenes()->updateOrCreate(
                 ['slug' => $scene['slug']],
                 [
+                    'title' => $scene['title'] ?? str($scene['slug'])->replace('-', ' ')->headline()->value(),
                     'setting' => $scene['setting'],
                     'cefr_level' => 'a1',
                     'sort_order' => ($index + 1) * 10,

@@ -33,7 +33,7 @@ class SpeakingJudge implements Agent, HasStructuredOutput
             .'Score grammar, vocabulary, cohesion, and task completion from 0 to 100. '
             .'Use null for pronunciation unless audio-level evidence is explicitly available. '
             .'Estimate the attempt CEFR level as pre_a1, a1, a2, b1, b2, c1, or c2. '
-            .'Feedback must be one short friendly English sentence about spoken meaning, pronunciation, grammar, vocabulary, or natural phrasing. '
+            .'Feedback must be one short friendly sentence in the requested feedback language about spoken meaning, pronunciation, grammar, vocabulary, or natural phrasing. '
             .'normalized_transcript must be a conservative target-language interpretation of what the learner most likely said; do not add new meaning. '
             .'Set normalization_confidence to high when the normalized transcript is very likely what the learner said, medium when likely enough to show to the learner, and low when uncertain. '
             .'Use normalization_note to briefly explain uncertainty, or leave it empty when confidence is high. '
@@ -41,10 +41,10 @@ class SpeakingJudge implements Agent, HasStructuredOutput
             .'suggested_response must be a natural target-language phrase the learner can try next for this exact goal. '
             .'Set should_retry to true when normalization_confidence is low, or when the answer is understandable but too rough, incomplete, off-topic, mostly outside the target language, or fails strict mode. '
             .'Set should_retry to false when the conversation should continue. '
-            .'retry_reason must be empty when should_retry is false, otherwise one short English reason. '
+            .'retry_reason must be empty when should_retry is false, otherwise one short reason in the requested feedback language. '
             .'Set intent_match to full when the goal is clearly answered, partial when the answer is related but incomplete, and off_topic when it misses the goal. '
             .'Set went_off_script to true when the learner adds extra information or answers in an unexpected but still conversationally acceptable way. '
-            .'Use communication_note to explain the communicative result in one short English sentence. '
+            .'Use communication_note to explain the communicative result in one short sentence in the requested feedback language. '
             .'Use improvement_focus for the single most useful next focus area.';
     }
 

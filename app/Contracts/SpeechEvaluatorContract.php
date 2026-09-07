@@ -19,5 +19,7 @@ interface SpeechEvaluatorContract
         string $learnerCefrLevel = 'pre_a1',
         string $targetLanguageCode = 'lt',
         string $targetLanguageName = 'Lithuanian',
+        string $feedbackLanguageCode = 'en',
+        string $feedbackLanguageName = 'English',
     ): array;
 }

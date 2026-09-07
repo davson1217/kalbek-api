@@ -14,11 +14,13 @@ class ScenarioSummaryResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $locale = $this->supportLocale($request);
+
         return [
             'id' => $this->slug,
-            'title' => $this->title,
-            'subtitle' => $this->subtitle,
-            'description' => $this->description,
+            'title' => $this->translated('title', $locale, $this->title),
+            'subtitle' => $this->translated('subtitle', $locale, $this->subtitle),
+            'description' => $this->translated('description', $locale, $this->description),
             'emoji' => $this->emoji,
             'language' => $this->whenLoaded('language', fn () => [
                 'code' => $this->language->code,
@@ -41,5 +43,12 @@ class ScenarioSummaryResource extends JsonResource
             'available' => $this->getAttribute('available_for_user') ?? true,
             'availability_reason' => $this->getAttribute('availability_reason'),
         ];
+    }
+
+    private function supportLocale(Request $request): string
+    {
+        $userLocale = $request->user('sanctum')?->profile?->app_language;
+
+        return $request->string('app_language')->trim()->lower()->value() ?: ($userLocale ?: 'en');
     }
 }

@@ -21,6 +21,8 @@ class ProfileResource extends JsonResource
 
         return [
             'display_name' => $this->display_name,
+            'app_language' => $this->app_language ?? 'en',
+            'show_translations' => (bool) ($this->show_translations ?? true),
             'avatar_character' => $this->whenLoaded('avatarCharacter', fn () => $this->avatarCharacter ? [
                 'id' => $this->avatarCharacter->slug,
                 'name' => $this->avatarCharacter->name,

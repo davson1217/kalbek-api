@@ -12,6 +12,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'user_id',
     'avatar_character_id',
     'display_name',
+    'app_language',
+    'show_translations',
     'xp',
     'hearts',
     'streak',
@@ -41,6 +43,7 @@ class Profile extends Model
     {
         return [
             'xp' => 'integer',
+            'show_translations' => 'boolean',
             'hearts' => 'integer',
             'streak' => 'integer',
             'longest_streak' => 'integer',

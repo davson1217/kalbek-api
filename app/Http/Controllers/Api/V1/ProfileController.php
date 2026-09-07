@@ -43,6 +43,14 @@ class ProfileController extends Controller
             $user->save();
         }
 
+        if (array_key_exists('app_language', $data)) {
+            $profile->app_language = $data['app_language'];
+        }
+
+        if (array_key_exists('show_translations', $data)) {
+            $profile->show_translations = $data['show_translations'];
+        }
+
         $profile->save();
 
         return ProfileResource::make($profile->load('avatarCharacter', 'user.languageLevels', 'user'));
@@ -54,7 +62,7 @@ class ProfileController extends Controller
             ->with('avatarCharacter')
             ->firstOrCreate(
                 [],
-                ['display_name' => $user->name],
+                ['display_name' => $user->name, 'app_language' => 'en', 'show_translations' => true],
             )
             ->loadMissing('user.languageLevels');
     }

@@ -6,24 +6,29 @@ use App\Http\Controllers\Controller;
 use App\Models\Scenario;
 use App\Models\Scene;
 use App\Models\SceneProp;
+use App\Services\Content\SyncContentTranslations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class ScenePropController extends Controller
 {
-    public function store(Request $request, Scenario $scenario, Scene $scene): RedirectResponse
+    public function store(Request $request, Scenario $scenario, Scene $scene, SyncContentTranslations $translations): RedirectResponse
     {
         $this->ensureScene($scenario, $scene);
-        $scene->props()->create($this->validated($request));
+        $data = $this->validated($request, $translations);
+        $prop = $scene->props()->create($this->contentData($data));
+        $translations->sync($prop, $data['translations'] ?? [], ['support_translation']);
 
         return back()->with('success', 'Prop created.');
     }
 
-    public function update(Request $request, Scenario $scenario, Scene $scene, SceneProp $prop): RedirectResponse
+    public function update(Request $request, Scenario $scenario, Scene $scene, SceneProp $prop, SyncContentTranslations $translations): RedirectResponse
     {
         $this->ensureProp($scenario, $scene, $prop);
-        $prop->update($this->validated($request));
+        $data = $this->validated($request, $translations);
+        $prop->update($this->contentData($data));
+        $translations->sync($prop, $data['translations'] ?? [], ['support_translation']);
 
         return back()->with('success', 'Prop updated.');
     }
@@ -36,7 +41,7 @@ class ScenePropController extends Controller
         return back()->with('success', 'Prop deleted.');
     }
 
-    private function validated(Request $request): array
+    private function validated(Request $request, ?SyncContentTranslations $translations = null): array
     {
         return $request->validate([
             'type' => ['required', Rule::in(['menu_item'])],
@@ -44,7 +49,15 @@ class ScenePropController extends Controller
             'support_translation' => ['required', 'string', 'max:500'],
             'price' => ['nullable', 'string', 'max:80'],
             'sort_order' => ['required', 'integer', 'min:0'],
+            ...($translations?->rules(['support_translation']) ?? []),
         ]);
+    }
+
+    private function contentData(array $data): array
+    {
+        unset($data['translations']);
+
+        return $data;
     }
 
     private function ensureScene(Scenario $scenario, Scene $scene): void

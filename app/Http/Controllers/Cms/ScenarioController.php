@@ -9,6 +9,7 @@ use App\Models\Character;
 use App\Models\Language;
 use App\Models\Scenario;
 use App\Services\Content\AuditScenarioContent;
+use App\Services\Content\SyncContentTranslations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,7 +22,7 @@ class ScenarioController extends Controller
     {
         return Inertia::render('Scenarios/Index', [
             'scenarios' => Scenario::query()
-                ->with(['character', 'language'])
+                ->with(['character', 'language', 'translations'])
                 ->withCount('scenes')
                 ->orderBy('sort_order')
                 ->orderBy('title')
@@ -34,9 +35,11 @@ class ScenarioController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, SyncContentTranslations $translations): RedirectResponse
     {
-        $scenario = Scenario::query()->create($this->validated($request));
+        $data = $this->validated($request, translations: $translations);
+        $scenario = Scenario::query()->create($this->contentData($data));
+        $translations->sync($scenario, $data['translations'] ?? [], ['title', 'subtitle', 'description']);
 
         return redirect()->route('cms.scenarios.show', $scenario)->with('success', 'Scenario created.');
     }
@@ -46,10 +49,15 @@ class ScenarioController extends Controller
         $scenario->load([
             'character',
             'language',
+            'translations',
+            'scenes.translations',
+            'scenes.npcLines.translations',
             'scenes.npcLines.triggerGoal',
+            'scenes.goals.translations',
             'scenes.goals.nextScene',
+            'scenes.goals.responseLines.translations',
             'scenes.goals.responseLines.triggerGoal',
-            'scenes.props',
+            'scenes.props.translations',
         ]);
 
         return Inertia::render('Scenarios/Show', [
@@ -62,14 +70,16 @@ class ScenarioController extends Controller
         ]);
     }
 
-    public function update(Request $request, Scenario $scenario): RedirectResponse
+    public function update(Request $request, Scenario $scenario, SyncContentTranslations $translations): RedirectResponse
     {
-        $scenario->update($this->validated($request, $scenario));
+        $data = $this->validated($request, $scenario, $translations);
+        $scenario->update($this->contentData($data));
+        $translations->sync($scenario, $data['translations'] ?? [], ['title', 'subtitle', 'description']);
 
         return back()->with('success', 'Scenario updated.');
     }
 
-    private function validated(Request $request, ?Scenario $scenario = null): array
+    private function validated(Request $request, ?Scenario $scenario = null, ?SyncContentTranslations $translations = null): array
     {
         return $request->validate([
             'language_id' => ['required', 'integer', 'exists:languages,id'],
@@ -85,7 +95,15 @@ class ScenarioController extends Controller
             'status' => ['required', Rule::enum(ContentStatus::class)],
             'is_free' => ['required', 'boolean'],
             'sort_order' => ['required', 'integer', 'min:0'],
+            ...($translations?->rules(['title', 'subtitle', 'description']) ?? []),
         ]);
+    }
+
+    private function contentData(array $data): array
+    {
+        unset($data['translations']);
+
+        return $data;
     }
 
     private function summary(Scenario $scenario): array
@@ -114,6 +132,7 @@ class ScenarioController extends Controller
             'character' => $scenario->character?->name,
             'scenes_count' => $scenario->scenes_count ?? null,
             'updated_at' => $scenario->updated_at?->toDateTimeString(),
+            'translations' => $scenario->translationMap(),
         ];
     }
 
@@ -124,9 +143,11 @@ class ScenarioController extends Controller
             'scenes' => $scenario->scenes->map(fn ($scene): array => [
                 'id' => $scene->id,
                 'slug' => $scene->slug,
+                'title' => $scene->title,
                 'setting' => $scene->setting,
                 'cefr_level' => $scene->cefr_level?->value,
                 'sort_order' => $scene->sort_order,
+                'translations' => $scene->translationMap(),
                 'lines' => $scene->npcLines->map(fn ($line): array => [
                     'id' => $line->id,
                     'target_text' => $line->target_text,
@@ -136,6 +157,7 @@ class ScenarioController extends Controller
                     'trigger_goal_db_id' => $line->trigger_goal_id,
                     'priority' => $line->priority,
                     'sort_order' => $line->sort_order,
+                    'translations' => $line->translationMap(),
                 ]),
                 'goals' => $scene->goals->map(fn ($goal): array => [
                     'id' => $goal->id,
@@ -147,6 +169,7 @@ class ScenarioController extends Controller
                     'next_scene_id' => $goal->next_scene_id,
                     'next_scene_slug' => $goal->nextScene?->slug,
                     'sort_order' => $goal->sort_order,
+                    'translations' => $goal->translationMap(),
                     'response_lines' => $goal->responseLines->map(fn ($line): array => [
                         'id' => $line->id,
                         'target_text' => $line->target_text,
@@ -156,6 +179,7 @@ class ScenarioController extends Controller
                         'trigger_goal_db_id' => $line->trigger_goal_id,
                         'priority' => $line->priority,
                         'sort_order' => $line->sort_order,
+                        'translations' => $line->translationMap(),
                     ]),
                 ]),
                 'props' => $scene->props->map(fn ($prop): array => [
@@ -166,6 +190,7 @@ class ScenarioController extends Controller
                     'price' => $prop->price,
                     'metadata' => $prop->metadata,
                     'sort_order' => $prop->sort_order,
+                    'translations' => $prop->translationMap(),
                 ]),
             ]),
         ];

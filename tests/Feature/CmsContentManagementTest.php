@@ -81,9 +81,14 @@ class CmsContentManagementTest extends TestCase
 
         $this->actingAs($admin)->post(route('cms.scenarios.scenes.store', $scenario), [
             'slug' => 'test-scene',
+            'title' => 'Test scene',
             'setting' => 'A teacher-authored test scene.',
             'cefr_level' => 'a1',
             'sort_order' => 999,
+            'translations' => [
+                'title' => ['lt' => 'Bandomoji scena'],
+                'setting' => ['lt' => 'Mokytojo sukurta bandomoji scena.'],
+            ],
         ])->assertRedirect();
 
         $scene = Scene::query()->where('scenario_id', $scenario->id)->where('slug', 'test-scene')->firstOrFail();
@@ -96,6 +101,10 @@ class CmsContentManagementTest extends TestCase
             'cefr_level' => 'a1',
             'next_scene_id' => null,
             'sort_order' => 10,
+            'translations' => [
+                'label' => ['lt' => 'Paklauskite bandomo klausimo'],
+                'intent' => ['lt' => 'Paklausti trumpo mokytojo sukurto bandomojo klausimo.'],
+            ],
         ])->assertRedirect();
 
         $goal = Goal::query()->where('scene_id', $scene->id)->where('slug', 'test-goal')->firstOrFail();
@@ -107,6 +116,9 @@ class CmsContentManagementTest extends TestCase
             'trigger_goal_id' => $goal->id,
             'priority' => 100,
             'sort_order' => 10,
+            'translations' => [
+                'support_translation' => ['lt' => 'Taip, turime testą.'],
+            ],
         ])->assertRedirect();
 
         $this->assertDatabaseHas('npc_lines', [
@@ -116,11 +128,27 @@ class CmsContentManagementTest extends TestCase
             'cefr_level' => 'a1',
             'priority' => 100,
         ]);
+        $this->assertDatabaseHas('content_translations', [
+            'translatable_type' => Scene::class,
+            'translatable_id' => $scene->id,
+            'field' => 'title',
+            'locale' => 'lt',
+            'value' => 'Bandomoji scena',
+        ]);
+        $this->assertDatabaseHas('content_translations', [
+            'translatable_type' => Goal::class,
+            'translatable_id' => $goal->id,
+            'field' => 'label',
+            'locale' => 'lt',
+            'value' => 'Paklauskite bandomo klausimo',
+        ]);
 
         $this->actingAs($admin)->get(route('cms.scenarios.show', $scenario))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Scenarios/Show')
+                ->where('scenario.scenes.5.title', 'Test scene')
+                ->where('scenario.scenes.5.translations.title.lt', 'Bandomoji scena')
                 ->where('scenario.scenes.5.goals.0.response_lines.0.target_text', 'Taip, turime testą.'));
     }
 

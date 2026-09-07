@@ -21,6 +21,7 @@ class SceneFactory extends Factory
         return [
             'scenario_id' => Scenario::factory(),
             'slug' => fake()->unique()->slug(2),
+            'title' => fake()->words(2, true),
             'setting' => fake()->sentence(),
             'sort_order' => fake()->numberBetween(1, 50),
         ];

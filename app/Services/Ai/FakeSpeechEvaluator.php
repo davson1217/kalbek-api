@@ -20,6 +20,8 @@ class FakeSpeechEvaluator implements SpeechEvaluatorContract
         string $learnerCefrLevel = 'pre_a1',
         string $targetLanguageCode = 'lt',
         string $targetLanguageName = 'Lithuanian',
+        string $feedbackLanguageCode = 'en',
+        string $feedbackLanguageName = 'English',
     ): array {
         $transcript = (string) config('services.kalbek.fake_speech_transcript', 'Ar turite maisto?');
         $pass = (bool) config('services.kalbek.fake_speech_pass', true);
@@ -33,8 +35,8 @@ class FakeSpeechEvaluator implements SpeechEvaluatorContract
             'pass' => $pass,
             'can_continue' => $pass,
             'should_retry' => ! $pass,
-            'retry_reason' => $pass ? '' : 'Try once more before continuing.',
-            'feedback' => (string) config('services.kalbek.fake_speech_feedback', 'Dev AI mode: speech accepted without calling an AI provider.'),
+            'retry_reason' => $pass ? '' : ($feedbackLanguageCode === 'lt' ? 'Pabandykite dar kartą prieš tęsdami.' : 'Try once more before continuing.'),
+            'feedback' => (string) config('services.kalbek.fake_speech_feedback', $feedbackLanguageCode === 'lt' ? 'Dev AI režimas: atsakymas priimtas nekviečiant AI tiekėjo.' : 'Dev AI mode: speech accepted without calling an AI provider.'),
             'corrected' => $transcript,
             'suggested_response' => $suggestedResponse,
             'suggestion' => $suggestedResponse,
@@ -42,7 +44,9 @@ class FakeSpeechEvaluator implements SpeechEvaluatorContract
                 'intent_match' => $pass ? 'full' : 'partial',
                 'understood_meaning' => $pass,
                 'went_off_script' => false,
-                'note' => $pass ? 'The spoken answer satisfies the current goal.' : 'The spoken answer needs another try.',
+                'note' => $pass
+                    ? ($feedbackLanguageCode === 'lt' ? 'Pasakytas atsakymas atitinka dabartinę užduotį.' : 'The spoken answer satisfies the current goal.')
+                    : ($feedbackLanguageCode === 'lt' ? 'Pasakytą atsakymą reikia pakartoti.' : 'The spoken answer needs another try.'),
                 'improvement_focus' => $pass ? 'none' : 'task',
             ],
             'scores' => [

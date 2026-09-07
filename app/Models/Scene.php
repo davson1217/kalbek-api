@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\CefrLevel;
+use App\Models\Concerns\HasContentTranslations;
 use Database\Factories\SceneFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -13,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 #[Fillable([
     'scenario_id',
     'slug',
+    'title',
     'setting',
     'cefr_level',
     'sort_order',
@@ -20,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Scene extends Model
 {
     /** @use HasFactory<SceneFactory> */
+    use HasContentTranslations;
     use HasFactory;
 
     public function scenario(): BelongsTo

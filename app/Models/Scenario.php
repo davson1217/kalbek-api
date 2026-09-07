@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\CefrLevel;
 use App\ContentStatus;
+use App\Models\Concerns\HasContentTranslations;
 use Database\Factories\ScenarioFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Scope;
@@ -32,6 +33,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Scenario extends Model
 {
     /** @use HasFactory<ScenarioFactory> */
+    use HasContentTranslations;
     use HasFactory;
 
     public function character(): BelongsTo

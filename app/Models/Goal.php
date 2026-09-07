@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\CefrLevel;
+use App\Models\Concerns\HasContentTranslations;
 use Database\Factories\GoalFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -23,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Goal extends Model
 {
     /** @use HasFactory<GoalFactory> */
+    use HasContentTranslations;
     use HasFactory;
 
     public function scene(): BelongsTo

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Database\Factories\ScenePropFactory;
+use App\Models\Concerns\HasContentTranslations;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -20,6 +21,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class SceneProp extends Model
 {
     /** @use HasFactory<ScenePropFactory> */
+    use HasContentTranslations;
     use HasFactory;
 
     public function scene(): BelongsTo

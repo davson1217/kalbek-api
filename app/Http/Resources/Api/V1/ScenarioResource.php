@@ -14,11 +14,13 @@ class ScenarioResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $locale = $this->supportLocale($request);
+
         return [
             'id' => $this->slug,
-            'title' => $this->title,
-            'subtitle' => $this->subtitle,
-            'description' => $this->description,
+            'title' => $this->translated('title', $locale, $this->title),
+            'subtitle' => $this->translated('subtitle', $locale, $this->subtitle),
+            'description' => $this->translated('description', $locale, $this->description),
             'emoji' => $this->emoji,
             'language' => $this->whenLoaded('language', fn () => [
                 'code' => $this->language->code,
@@ -46,11 +48,12 @@ class ScenarioResource extends JsonResource
             'start_scene_id' => $this->start_scene_slug,
             'scenes' => $this->whenLoaded('scenes', fn () => $this->scenes->map(fn ($scene): array => [
                 'id' => $scene->slug,
-                'setting' => $scene->setting,
+                'title' => $scene->translated('title', $locale, $scene->title ?? $scene->slug),
+                'setting' => $scene->translated('setting', $locale, $scene->setting),
                 'cefr_level' => $scene->cefr_level?->value,
                 'lines' => $scene->npcLines->map(fn ($line): array => [
                     'target_text' => $line->target_text,
-                    'support_translation' => $line->support_translation,
+                    'support_translation' => $line->translated('support_translation', $locale, $line->support_translation),
                     'cefr_level' => $line->cefr_level?->value,
                     'trigger_goal_id' => $line->triggerGoal?->slug,
                     'priority' => $line->priority,
@@ -58,19 +61,26 @@ class ScenarioResource extends JsonResource
                 'props' => $scene->props->map(fn ($prop): array => [
                     'type' => $prop->type,
                     'target_text' => $prop->target_text,
-                    'support_translation' => $prop->support_translation,
+                    'support_translation' => $prop->translated('support_translation', $locale, $prop->support_translation),
                     'price' => $prop->price,
                     'metadata' => $prop->metadata,
                 ])->values(),
                 'goals' => $scene->goals->map(fn ($goal): array => [
                     'id' => $goal->slug,
-                    'label' => $goal->label,
-                    'intent' => $goal->intent,
+                    'label' => $goal->translated('label', $locale, $goal->label),
+                    'intent' => $goal->translated('intent', $locale, $goal->intent),
                     'example' => $goal->example,
                     'cefr_level' => $goal->cefr_level?->value,
                     'next' => $goal->nextScene?->slug,
                 ])->values(),
             ])->values()),
         ];
+    }
+
+    private function supportLocale(Request $request): string
+    {
+        $userLocale = $request->user('sanctum')?->profile?->app_language;
+
+        return $request->string('app_language')->trim()->lower()->value() ?: ($userLocale ?: 'en');
     }
 }

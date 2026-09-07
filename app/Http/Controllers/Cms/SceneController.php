@@ -6,23 +6,28 @@ use App\CefrLevel;
 use App\Http\Controllers\Controller;
 use App\Models\Scenario;
 use App\Models\Scene;
+use App\Services\Content\SyncContentTranslations;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
 class SceneController extends Controller
 {
-    public function store(Request $request, Scenario $scenario): RedirectResponse
+    public function store(Request $request, Scenario $scenario, SyncContentTranslations $translations): RedirectResponse
     {
-        $scenario->scenes()->create($this->validated($request, $scenario));
+        $data = $this->validated($request, $scenario, translations: $translations);
+        $scene = $scenario->scenes()->create($this->contentData($data));
+        $translations->sync($scene, $data['translations'] ?? [], ['title', 'setting']);
 
         return back()->with('success', 'Scene created.');
     }
 
-    public function update(Request $request, Scenario $scenario, Scene $scene): RedirectResponse
+    public function update(Request $request, Scenario $scenario, Scene $scene, SyncContentTranslations $translations): RedirectResponse
     {
         $this->ensureScene($scenario, $scene);
-        $scene->update($this->validated($request, $scenario, $scene));
+        $data = $this->validated($request, $scenario, $scene, $translations);
+        $scene->update($this->contentData($data));
+        $translations->sync($scene, $data['translations'] ?? [], ['title', 'setting']);
 
         return back()->with('success', 'Scene updated.');
     }
@@ -35,7 +40,7 @@ class SceneController extends Controller
         return back()->with('success', 'Scene deleted.');
     }
 
-    private function validated(Request $request, Scenario $scenario, ?Scene $scene = null): array
+    private function validated(Request $request, Scenario $scenario, ?Scene $scene = null, ?SyncContentTranslations $translations = null): array
     {
         return $request->validate([
             'slug' => [
@@ -44,10 +49,19 @@ class SceneController extends Controller
                 'max:100',
                 Rule::unique('scenes', 'slug')->where('scenario_id', $scenario->id)->ignore($scene),
             ],
+            'title' => ['required', 'string', 'max:160'],
             'setting' => ['required', 'string', 'max:1000'],
             'cefr_level' => ['nullable', Rule::enum(CefrLevel::class)],
             'sort_order' => ['required', 'integer', 'min:0'],
+            ...($translations?->rules(['title', 'setting']) ?? []),
         ]);
+    }
+
+    private function contentData(array $data): array
+    {
+        unset($data['translations']);
+
+        return $data;
     }
 
     private function ensureScene(Scenario $scenario, Scene $scene): void

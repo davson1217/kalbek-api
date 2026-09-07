@@ -97,6 +97,48 @@ class ScenarioApiTest extends TestCase
             ->assertJsonCount(5, 'data.scenes.2.props');
     }
 
+    public function test_scenario_payload_uses_requested_app_language_translations(): void
+    {
+        $this->seed([CharacterSeeder::class, RestaurantScenarioSeeder::class]);
+        $scenario = Scenario::query()
+            ->where('slug', 'restoranas')
+            ->with(['scenes.goals', 'scenes.npcLines'])
+            ->firstOrFail();
+        $scene = $scenario->scenes->first();
+        $goal = $scene->goals->first();
+        $line = $scene->npcLines->first();
+
+        $scenario->translations()->createMany([
+            ['field' => 'title', 'locale' => 'lt', 'value' => 'Restoranas'],
+            ['field' => 'subtitle', 'locale' => 'lt', 'value' => 'Restorano pokalbis'],
+            ['field' => 'description', 'locale' => 'lt', 'value' => 'Mokykitės užsisakyti restorane.'],
+        ]);
+        $scene->translations()->createMany([
+            ['field' => 'title', 'locale' => 'lt', 'value' => 'Atvykimas'],
+            ['field' => 'setting', 'locale' => 'lt', 'value' => 'Įeinate į restoraną.'],
+        ]);
+        $goal->translations()->createMany([
+            ['field' => 'label', 'locale' => 'lt', 'value' => 'Paprašykite staliuko'],
+            ['field' => 'intent', 'locale' => 'lt', 'value' => 'Mandagiai pasisveikinti ir paprašyti staliuko.'],
+        ]);
+        $line->translations()->create([
+            'field' => 'support_translation',
+            'locale' => 'lt',
+            'value' => 'Mandagus restorano pasisveikinimas.',
+        ]);
+
+        $this->getJson('/api/v1/scenarios/restoranas?app_language=lt')
+            ->assertOk()
+            ->assertJsonPath('data.title', 'Restoranas')
+            ->assertJsonPath('data.subtitle', 'Restorano pokalbis')
+            ->assertJsonPath('data.description', 'Mokykitės užsisakyti restorane.')
+            ->assertJsonPath('data.scenes.0.title', 'Atvykimas')
+            ->assertJsonPath('data.scenes.0.setting', 'Įeinate į restoraną.')
+            ->assertJsonPath('data.scenes.0.goals.0.label', 'Paprašykite staliuko')
+            ->assertJsonPath('data.scenes.0.goals.0.intent', 'Mandagiai pasisveikinti ir paprašyti staliuko.')
+            ->assertJsonPath('data.scenes.0.lines.0.support_translation', 'Mandagus restorano pasisveikinimas.');
+    }
+
     public function test_pharmacy_scenario_detail_is_a_clean_a1_scene_graph(): void
     {
         $this->seed([CharacterSeeder::class, PharmacyVisitScenarioSeeder::class]);

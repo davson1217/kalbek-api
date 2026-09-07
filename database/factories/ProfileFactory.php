@@ -23,6 +23,8 @@ class ProfileFactory extends Factory
             'user_id' => User::factory(),
             'avatar_character_id' => Character::factory(),
             'display_name' => fake()->firstName(),
+            'app_language' => 'en',
+            'show_translations' => true,
             'xp' => 0,
             'hearts' => 5,
             'streak' => 0,
