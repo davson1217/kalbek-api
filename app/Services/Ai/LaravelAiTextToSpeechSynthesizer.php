@@ -14,6 +14,11 @@ use Laravel\Ai\Audio;
 
 class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
 {
+    /**
+     * @var array{disk: string, path: string, exception?: class-string, message: string}|null
+     */
+    private ?array $lastStorageFailure = null;
+
     public function synthesize(string $text, string $languageCode = 'lt', string $languageName = 'Lithuanian', ?string $voice = null): SynthesizedAudio
     {
         $voice ??= 'default-female';
@@ -187,7 +192,13 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
             }
         }
 
-        throw new \RuntimeException("Generated audio could not be stored on disk [{$primaryDisk}].");
+        $message = "Generated audio could not be stored on disk [{$primaryDisk}].";
+
+        if ($this->lastStorageFailure) {
+            $message .= ' Last storage failure: '.$this->lastStorageFailure['message'];
+        }
+
+        throw new \RuntimeException($message);
     }
 
     private function writeGeneratedAudio(string $disk, string $path, string $content): bool
@@ -195,17 +206,34 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
         try {
             $stored = Storage::disk($disk)->put($path, $content);
 
-            return $stored === true && Storage::disk($disk)->exists($path);
-        } catch (\Throwable $exception) {
-            Log::warning('Generated audio storage write failed.', [
-                'disk' => $disk,
-                'path' => $path,
-                'exception' => $exception::class,
-                'message' => $exception->getMessage(),
-            ]);
+            if ($stored !== true) {
+                return $this->storageFailure($disk, $path, 'Storage::put returned false.');
+            }
 
-            return false;
+            if (! Storage::disk($disk)->exists($path)) {
+                return $this->storageFailure($disk, $path, 'Stored object could not be verified with Storage::exists.');
+            }
+
+            return true;
+        } catch (\Throwable $exception) {
+            return $this->storageFailure($disk, $path, $exception->getMessage(), $exception);
         }
+    }
+
+    private function storageFailure(string $disk, string $path, string $message, ?\Throwable $exception = null): bool
+    {
+        $this->lastStorageFailure = array_filter([
+            'disk' => $disk,
+            'path' => $path,
+            'exception' => $exception ? $exception::class : null,
+            'message' => $message,
+        ]);
+
+        Log::warning('Generated audio storage write failed.', [
+            ...$this->lastStorageFailure,
+        ]);
+
+        return false;
     }
 
     private function browserPlayableAudio(string $content, string $mimeType): SynthesizedAudio
