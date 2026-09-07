@@ -8,6 +8,7 @@ use App\Exceptions\AudioGenerationInProgress;
 use App\Models\GeneratedAudio;
 use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Audio;
 
@@ -62,9 +63,8 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
         $content = $audio->content;
         $mimeType = $audio->mimeType;
         $extension = $mimeType === 'audio/wav' ? 'wav' : 'mp3';
-        $path = "generated-audio/{$cacheKey}.{$extension}";
-
-        Storage::disk('local')->put($path, $content);
+        $path = $this->generatedAudioPath($cacheKey, $extension);
+        $disk = $this->storeGeneratedAudio($path, $content);
 
         $generatedAudio = GeneratedAudio::query()->updateOrCreate(
             ['cache_key' => $cacheKey],
@@ -73,7 +73,7 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
                 'voice' => $voice,
                 'provider' => config('ai.default_for_audio'),
                 'model' => $model,
-                'disk' => 'local',
+                'disk' => $disk,
                 'path' => $path,
                 'mime_type' => $mimeType,
                 'bytes' => strlen($content),
@@ -145,6 +145,67 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
     private function metadataCacheKey(string $cacheKey): string
     {
         return "tts:generated-audio:{$cacheKey}";
+    }
+
+    private function generatedAudioDisk(): string
+    {
+        return (string) config('services.kalbek.generated_audio_disk', 'local');
+    }
+
+    private function generatedAudioPath(string $cacheKey, string $extension): string
+    {
+        $basePath = trim((string) config('services.kalbek.generated_audio_path', 'generated-audio'), '/');
+
+        return $basePath === ''
+            ? "{$cacheKey}.{$extension}"
+            : "{$basePath}/{$cacheKey}.{$extension}";
+    }
+
+    private function storeGeneratedAudio(string $path, string $content): string
+    {
+        $primaryDisk = $this->generatedAudioDisk();
+
+        if ($this->writeGeneratedAudio($primaryDisk, $path, $content)) {
+            return $primaryDisk;
+        }
+
+        $fallbackDisk = (string) config('services.kalbek.generated_audio_fallback_disk', 'local');
+
+        if (
+            (bool) config('services.kalbek.generated_audio_allow_fallback', false)
+            && $fallbackDisk !== ''
+            && $fallbackDisk !== $primaryDisk
+        ) {
+            Log::warning('Generated audio storage failed on primary disk. Falling back.', [
+                'primary_disk' => $primaryDisk,
+                'fallback_disk' => $fallbackDisk,
+                'path' => $path,
+            ]);
+
+            if ($this->writeGeneratedAudio($fallbackDisk, $path, $content)) {
+                return $fallbackDisk;
+            }
+        }
+
+        throw new \RuntimeException("Generated audio could not be stored on disk [{$primaryDisk}].");
+    }
+
+    private function writeGeneratedAudio(string $disk, string $path, string $content): bool
+    {
+        try {
+            $stored = Storage::disk($disk)->put($path, $content);
+
+            return $stored === true && Storage::disk($disk)->exists($path);
+        } catch (\Throwable $exception) {
+            Log::warning('Generated audio storage write failed.', [
+                'disk' => $disk,
+                'path' => $path,
+                'exception' => $exception::class,
+                'message' => $exception->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     private function browserPlayableAudio(string $content, string $mimeType): SynthesizedAudio

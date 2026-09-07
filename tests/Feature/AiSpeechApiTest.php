@@ -114,6 +114,65 @@ class AiSpeechApiTest extends TestCase
         Audio::assertNothingGenerated();
     }
 
+    public function test_text_to_speech_uses_configured_generated_audio_disk_and_path(): void
+    {
+        Cache::flush();
+        Config::set('services.kalbek.generated_audio_disk', 's3');
+        Config::set('services.kalbek.generated_audio_path', 'generated-audio/testing');
+        Storage::fake('s3');
+        Audio::fake([base64_encode('s3-audio-content')]);
+
+        $response = $this->getJson('/api/v1/tts?text=Sveiki');
+
+        $response
+            ->assertOk()
+            ->assertContent('s3-audio-content');
+
+        $audio = GeneratedAudio::query()->where('text', 'Sveiki')->firstOrFail();
+
+        $this->assertSame('s3', $audio->disk);
+        $this->assertStringStartsWith('generated-audio/testing/', $audio->path);
+        Storage::disk('s3')->assertExists($audio->path);
+    }
+
+    public function test_text_to_speech_falls_back_to_configured_disk_when_primary_storage_fails(): void
+    {
+        Cache::flush();
+        Config::set('services.kalbek.generated_audio_disk', 'missing-disk');
+        Config::set('services.kalbek.generated_audio_fallback_disk', 'local');
+        Config::set('services.kalbek.generated_audio_allow_fallback', true);
+        Storage::fake('local');
+        Audio::fake([base64_encode('fallback-audio-content')]);
+
+        $response = $this->getJson('/api/v1/tts?text=Fallback');
+
+        $response
+            ->assertOk()
+            ->assertContent('fallback-audio-content');
+
+        $audio = GeneratedAudio::query()->where('text', 'Fallback')->firstOrFail();
+
+        $this->assertSame('local', $audio->disk);
+        Storage::disk('local')->assertExists($audio->path);
+    }
+
+    public function test_text_to_speech_fails_when_primary_storage_fails_and_fallback_is_disabled(): void
+    {
+        Cache::flush();
+        Config::set('services.kalbek.generated_audio_disk', 'missing-disk');
+        Config::set('services.kalbek.generated_audio_fallback_disk', 'local');
+        Config::set('services.kalbek.generated_audio_allow_fallback', false);
+        Storage::fake('local');
+        Audio::fake([base64_encode('unwritten-audio-content')]);
+
+        $this->getJson('/api/v1/tts?text=No%20fallback')
+            ->assertServerError();
+
+        $this->assertDatabaseMissing('generated_audio', [
+            'text' => 'No fallback',
+        ]);
+    }
+
     public function test_text_to_speech_validates_text(): void
     {
         $this->getJson('/api/v1/tts')
@@ -269,7 +328,7 @@ class AiSpeechApiTest extends TestCase
 
         $attempt = SpeakingAttempt::query()->where('transcript', 'Norėčiau staliuko dviem.')->firstOrFail();
 
-        $this->assertSame([
+        $this->assertEquals([
             'duration_seconds' => 1.64,
             'rms' => 0.031,
             'peak' => 0.42,

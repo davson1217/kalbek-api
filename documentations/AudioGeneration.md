@@ -46,13 +46,17 @@ Relevant environment values:
 - `KALBEK_TTS_METADATA_CACHE_TTL_SECONDS=86400`
 - `KALBEK_TTS_GENERATION_LOCK_SECONDS=60`
 - `KALBEK_TTS_GENERATION_LOCK_WAIT_SECONDS=50`
+- `KALBEK_GENERATED_AUDIO_DISK=local`
+- `KALBEK_GENERATED_AUDIO_PATH=generated-audio`
+- `KALBEK_GENERATED_AUDIO_FALLBACK_DISK=local`
+- `KALBEK_GENERATED_AUDIO_ALLOW_FALLBACK=false`
 
 ## Current Storage Model
 
 Generated audio is stored in two places:
 
 - **MySQL metadata**: `generated_audio`
-- **Audio binary**: Laravel `local` disk, currently under `storage/app/generated-audio`
+- **Audio binary**: configured Laravel filesystem disk/path
 
 Important `generated_audio` columns:
 
@@ -67,7 +71,39 @@ Important `generated_audio` columns:
 - `bytes`: stored audio size.
 - `last_used_at`: updated when cached audio is served.
 
-This is acceptable for local development, staging, and a single-server deployment with persistent storage.
+Default local development values:
+
+```env
+KALBEK_GENERATED_AUDIO_DISK=local
+KALBEK_GENERATED_AUDIO_PATH=generated-audio
+KALBEK_GENERATED_AUDIO_FALLBACK_DISK=local
+KALBEK_GENERATED_AUDIO_ALLOW_FALLBACK=false
+```
+
+With those defaults, files are written to Laravel's `local` disk under `storage/app/private/generated-audio`.
+
+For staging or production, point generated audio at an S3-compatible disk:
+
+```env
+KALBEK_GENERATED_AUDIO_DISK=s3
+KALBEK_GENERATED_AUDIO_PATH=generated-audio/staging
+KALBEK_GENERATED_AUDIO_FALLBACK_DISK=local
+KALBEK_GENERATED_AUDIO_ALLOW_FALLBACK=false
+```
+
+Keep `FILESYSTEM_DISK=local` unless the whole application should use S3 as its default disk. Generated audio has its own disk setting so it can move to object storage without changing unrelated file behavior.
+
+The write path verifies that the file was actually stored before saving `generated_audio`. If the primary disk fails and fallback is disabled, the request fails and no metadata row is written for a missing file.
+
+Fallback can be useful during local development when testing S3-compatible credentials:
+
+```env
+KALBEK_GENERATED_AUDIO_DISK=s3
+KALBEK_GENERATED_AUDIO_FALLBACK_DISK=local
+KALBEK_GENERATED_AUDIO_ALLOW_FALLBACK=true
+```
+
+Do not silently enable fallback in production unless there is monitoring around it. A local fallback on a multi-instance deployment can hide object-storage outages and create files that other instances cannot read.
 
 ## Production Storage Recommendation
 
@@ -81,6 +117,34 @@ Recommended production model:
 - Put a CDN in front of object storage for faster global delivery.
 - Keep deterministic cache keys based on language, provider/model, voice, and exact text.
 - Regenerate audio only when one of those inputs changes.
+
+For Laravel Cloud Object Storage or Cloudflare R2, use the existing Laravel `s3` disk with S3-compatible credentials:
+
+```env
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=auto
+AWS_BUCKET=kalbek-staging-audio
+AWS_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
+AWS_USE_PATH_STYLE_ENDPOINT=true
+KALBEK_GENERATED_AUDIO_DISK=s3
+KALBEK_GENERATED_AUDIO_PATH=generated-audio/staging
+KALBEK_GENERATED_AUDIO_ALLOW_FALLBACK=false
+```
+
+For AWS S3:
+
+```env
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=eu-central-1
+AWS_BUCKET=kalbek-staging-audio
+AWS_ENDPOINT=
+AWS_USE_PATH_STYLE_ENDPOINT=false
+KALBEK_GENERATED_AUDIO_DISK=s3
+KALBEK_GENERATED_AUDIO_PATH=generated-audio/staging
+KALBEK_GENERATED_AUDIO_ALLOW_FALLBACK=false
+```
 
 ## CMS Pre-Generation Direction
 

@@ -13,12 +13,12 @@ class GoogleOAuthController extends Controller
 {
     public function redirect(): RedirectResponse
     {
-        return Socialite::driver('google')->redirect();
+        return Socialite::driver('google')->stateless()->redirect();
     }
 
     public function callback(ResolveGoogleUser $resolveGoogleUser): RedirectResponse
     {
-        $user = $resolveGoogleUser->handle(Socialite::driver('google')->user());
+        $user = $resolveGoogleUser->handle(Socialite::driver('google')->stateless()->user());
         $code = Str::random(64);
 
         Cache::put("oauth:handoff:{$code}", $user->id, now()->addMinutes(5));
