@@ -28,6 +28,7 @@ class UpdateProfileRequest extends FormRequest
             'strict_speech_mode' => ['sometimes', 'required', 'boolean'],
             'app_language' => ['sometimes', 'required', 'string', 'in:en,lt'],
             'show_translations' => ['sometimes', 'required', 'boolean'],
+            'show_success_feedback' => ['sometimes', 'required', 'boolean'],
         ];
     }
 }

@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
     'display_name',
     'app_language',
     'show_translations',
+    'show_success_feedback',
     'xp',
     'hearts',
     'streak',
@@ -44,6 +45,7 @@ class Profile extends Model
         return [
             'xp' => 'integer',
             'show_translations' => 'boolean',
+            'show_success_feedback' => 'boolean',
             'hearts' => 'integer',
             'streak' => 'integer',
             'longest_streak' => 'integer',

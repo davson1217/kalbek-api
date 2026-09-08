@@ -25,6 +25,7 @@ class ProfileFactory extends Factory
             'display_name' => fake()->firstName(),
             'app_language' => 'en',
             'show_translations' => true,
+            'show_success_feedback' => true,
             'xp' => 0,
             'hearts' => 5,
             'streak' => 0,

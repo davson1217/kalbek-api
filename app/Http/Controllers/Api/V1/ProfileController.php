@@ -51,6 +51,10 @@ class ProfileController extends Controller
             $profile->show_translations = $data['show_translations'];
         }
 
+        if (array_key_exists('show_success_feedback', $data)) {
+            $profile->show_success_feedback = $data['show_success_feedback'];
+        }
+
         $profile->save();
 
         return ProfileResource::make($profile->load('avatarCharacter', 'user.languageLevels', 'user'));
@@ -62,7 +66,12 @@ class ProfileController extends Controller
             ->with('avatarCharacter')
             ->firstOrCreate(
                 [],
-                ['display_name' => $user->name, 'app_language' => 'en', 'show_translations' => true],
+                [
+                    'display_name' => $user->name,
+                    'app_language' => 'en',
+                    'show_translations' => true,
+                    'show_success_feedback' => true,
+                ],
             )
             ->loadMissing('user.languageLevels');
     }

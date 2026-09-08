@@ -33,6 +33,7 @@ class ProfileApiTest extends TestCase
             ->assertJsonPath('data.avatar_character.id', 'gabija')
             ->assertJsonPath('data.app_language', 'en')
             ->assertJsonPath('data.show_translations', true)
+            ->assertJsonPath('data.show_success_feedback', true)
             ->assertJsonPath('data.strict_speech_mode', false)
             ->assertJsonPath('data.language_level.current_cefr_level', 'pre_a1')
             ->assertJsonPath('data.language_level.confidence_score', 0)
@@ -90,6 +91,7 @@ class ProfileApiTest extends TestCase
             'strict_speech_mode' => true,
             'app_language' => 'lt',
             'show_translations' => false,
+            'show_success_feedback' => false,
         ]);
 
         $response
@@ -98,6 +100,7 @@ class ProfileApiTest extends TestCase
             ->assertJsonPath('data.avatar_character.id', 'rasa')
             ->assertJsonPath('data.app_language', 'lt')
             ->assertJsonPath('data.show_translations', false)
+            ->assertJsonPath('data.show_success_feedback', false)
             ->assertJsonPath('data.strict_speech_mode', true);
 
         $this->assertDatabaseHas('profiles', [
@@ -105,6 +108,7 @@ class ProfileApiTest extends TestCase
             'display_name' => 'Adele',
             'app_language' => 'lt',
             'show_translations' => false,
+            'show_success_feedback' => false,
         ]);
         $this->assertDatabaseHas('users', [
             'id' => $user->id,
