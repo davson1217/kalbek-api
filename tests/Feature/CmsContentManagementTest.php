@@ -6,6 +6,7 @@ use App\Models\Goal;
 use App\Models\Language;
 use App\Models\NpcLine;
 use App\Models\Scenario;
+use App\Models\ScenarioNote;
 use App\Models\Scene;
 use App\Models\User;
 use Database\Seeders\CharacterSeeder;
@@ -174,6 +175,70 @@ class CmsContentManagementTest extends TestCase
             ->assertSessionHasErrors('trigger_goal_id');
 
         $this->assertSame(0, NpcLine::query()->where('scene_id', $firstScene->id)->where('target_text', 'Taip.')->count());
+    }
+
+    public function test_admin_can_manage_a_scenario_preparation_note(): void
+    {
+        $this->seed([CharacterSeeder::class, RestaurantScenarioSeeder::class]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $language = Language::query()->where('code', 'lt')->firstOrFail();
+        $character = Scenario::query()->where('slug', 'restoranas')->firstOrFail()->character;
+        $scenario = Scenario::factory()->create([
+            'language_id' => $language->id,
+            'character_id' => $character->id,
+            'slug' => 'note-test',
+            'title' => 'Note test',
+            'status' => 'published',
+        ]);
+
+        $this->actingAs($admin)->post(route('cms.scenarios.note.store', $scenario), [
+            'title' => 'Before the restaurant',
+            'body' => 'Practise greeting the waitress and asking for a table.',
+            'cefr_level' => 'a1',
+            'estimated_minutes' => 2,
+            'status' => 'published',
+            'translations' => [
+                'title' => ['lt' => 'Prieš restoraną'],
+                'body' => ['lt' => 'Pasimokykite pasisveikinti ir paprašyti staliuko.'],
+            ],
+        ])->assertRedirect();
+
+        $note = ScenarioNote::query()->where('scenario_id', $scenario->id)->firstOrFail();
+
+        $this->assertDatabaseHas('scenario_notes', [
+            'scenario_id' => $scenario->id,
+            'title' => 'Before the restaurant',
+            'status' => 'published',
+        ]);
+        $this->assertDatabaseHas('content_translations', [
+            'translatable_type' => ScenarioNote::class,
+            'translatable_id' => $note->id,
+            'field' => 'body',
+            'locale' => 'lt',
+            'value' => 'Pasimokykite pasisveikinti ir paprašyti staliuko.',
+        ]);
+
+        $this->actingAs($admin)->put(route('cms.scenarios.note.update', [$scenario, $note]), [
+            'title' => 'Restaurant prep',
+            'body' => 'Practise ordering politely.',
+            'cefr_level' => 'a1',
+            'estimated_minutes' => 3,
+            'status' => 'draft',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('scenario_notes', [
+            'id' => $note->id,
+            'title' => 'Restaurant prep',
+            'estimated_minutes' => 3,
+            'status' => 'draft',
+        ]);
+
+        $this->actingAs($admin)->get(route('cms.scenarios.show', $scenario))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Scenarios/Show')
+                ->where('scenario.note.title', 'Restaurant prep')
+                ->where('scenario.note.estimated_minutes', 3));
     }
 
     public function test_admin_can_see_scenario_flow_audit_issues(): void

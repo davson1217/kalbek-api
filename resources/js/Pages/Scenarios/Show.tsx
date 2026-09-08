@@ -1,10 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Edit3, PlayCircle, Plus, Volume2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, BookOpenText, CheckCircle2, Edit3, PlayCircle, Plus, Trash2, Volume2 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Modal } from '../../Components/Cms/Modal';
 import { Breadcrumbs, PageHeader, PrimaryButton, SecondaryButton, StatusBadge } from '../../Components/Cms/PageChrome';
-import { SceneForm } from '../../Components/Cms/Scenarios/ContentForms';
+import { SceneForm, ScenarioNoteForm } from '../../Components/Cms/Scenarios/ContentForms';
 import { ScenarioForm } from '../../Components/Cms/Scenarios/ScenarioForm';
 import { ScenarioPreview } from '../../Components/Cms/Scenarios/ScenarioPreview';
 import { ScenePanel } from '../../Components/Cms/Scenarios/ScenePanel';
@@ -23,6 +23,7 @@ interface Props {
 export default function ScenarioShow({ scenario, auditIssues, characters, languages, statuses, levels }: Props) {
     const [editingScenario, setEditingScenario] = useState(false);
     const [creatingScene, setCreatingScene] = useState(false);
+    const [editingNote, setEditingNote] = useState(false);
     const sceneOptions = scenario.scenes.map((scene) => ({ value: scene.id, label: scene.slug }));
     const goalOptions = scenario.scenes.flatMap((scene) => scene.goals.map((goal) => ({ value: goal.id, label: `${scene.slug}: ${goal.slug}` })));
 
@@ -65,6 +66,8 @@ export default function ScenarioShow({ scenario, auditIssues, characters, langua
 
                 <FlowAuditPanel issues={auditIssues} />
 
+                <ScenarioNotePanel scenario={scenario} onEdit={() => setEditingNote(true)} />
+
                 <AudioPreparationPanel scenario={scenario} />
 
                 <ScenarioPreview scenario={scenario} />
@@ -98,7 +101,62 @@ export default function ScenarioShow({ scenario, auditIssues, characters, langua
             <Modal open={creatingScene} title="Create scene" description="Scenes are the steps in a speaking scenario." onClose={() => setCreatingScene(false)}>
                 <SceneForm action={`/cms/scenarios/${scenario.slug}/scenes`} levels={levels} onSuccess={() => setCreatingScene(false)} />
             </Modal>
+
+            <Modal open={editingNote} title={scenario.note ? 'Edit preparation note' : 'Create preparation note'} description="Preparation notes teach the learner what this scenario will test before they start speaking." onClose={() => setEditingNote(false)}>
+                <ScenarioNoteForm action={scenario.note ? `/cms/scenarios/${scenario.slug}/note/${scenario.note.id}` : `/cms/scenarios/${scenario.slug}/note`} method={scenario.note ? 'put' : 'post'} note={scenario.note ?? undefined} levels={levels} statuses={statuses} onSuccess={() => setEditingNote(false)} />
+            </Modal>
         </CmsLayout>
+    );
+}
+
+function ScenarioNotePanel({ onEdit, scenario }: { onEdit: () => void; scenario: ScenarioDetail }) {
+    const note = scenario.note;
+
+    return (
+        <section className="rounded-3xl border border-emerald-100 bg-emerald-50/80 p-5 shadow-lg shadow-emerald-100/50">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-3">
+                    <span className="mt-1 inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-white text-emerald-700 shadow-sm">
+                        <BookOpenText className="size-5" />
+                    </span>
+                    <div>
+                        <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-700">Preparation note</p>
+                        <h2 className="mt-1 text-lg font-black text-emerald-950">
+                            {note ? note.title : 'No preparation note yet'}
+                        </h2>
+                        <p className="mt-1 max-w-3xl text-sm leading-6 text-emerald-900">
+                            {note
+                                ? 'This material appears before the learner starts the scenario.'
+                                : 'Add short teaching material so learners know what language patterns, vocabulary, or grammar they are about to practise.'}
+                        </p>
+                    </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={onEdit} className="inline-flex items-center justify-center gap-2 rounded-full border border-emerald-200 bg-white px-4 py-2 text-sm font-black text-emerald-800 shadow-sm transition hover:-translate-y-0.5">
+                        {note ? <Edit3 className="size-4" /> : <Plus className="size-4" />}
+                        {note ? 'Edit note' : 'Add note'}
+                    </button>
+                    {note ? (
+                        <button type="button" onClick={() => router.delete(`/cms/scenarios/${scenario.slug}/note/${note.id}`, { preserveScroll: true })} className="inline-flex items-center justify-center gap-2 rounded-full border border-rose-100 bg-white px-4 py-2 text-sm font-black text-rose-700 shadow-sm transition hover:-translate-y-0.5 hover:border-rose-200 hover:bg-rose-50">
+                            <Trash2 className="size-4" /> Delete
+                        </button>
+                    ) : null}
+                </div>
+            </div>
+
+            {note ? (
+                <div className="mt-4 rounded-2xl border border-white/80 bg-white/75 p-4">
+                    <div className="flex flex-wrap gap-2">
+                        <StatusBadge tone={note.status === 'published' ? 'emerald' : note.status === 'draft' ? 'amber' : 'slate'}>{note.status}</StatusBadge>
+                        <StatusBadge>{note.cefr_level?.toUpperCase() ?? scenario.cefr_level?.toUpperCase() ?? 'UNSET'}</StatusBadge>
+                        <StatusBadge>{note.estimated_minutes} min read</StatusBadge>
+                    </div>
+                    <div className="mt-3 whitespace-pre-line text-sm leading-6 text-slate-700">
+                        {note.body}
+                    </div>
+                </div>
+            ) : null}
+        </section>
     );
 }
 

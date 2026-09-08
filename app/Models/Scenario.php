@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable([
     'language_id',
@@ -49,6 +50,11 @@ class Scenario extends Model
     public function scenes(): HasMany
     {
         return $this->hasMany(Scene::class)->orderBy('sort_order');
+    }
+
+    public function note(): HasOne
+    {
+        return $this->hasOne(ScenarioNote::class);
     }
 
     public function lessonProgress(): HasMany

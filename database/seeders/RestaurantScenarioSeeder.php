@@ -43,9 +43,51 @@ class RestaurantScenarioSeeder extends Seeder
                 ->whereNotIn('slug', collect($this->scenes())->pluck('slug')->all())
                 ->delete();
 
+            $this->upsertNote($scenario);
             $scenes = $this->upsertScenes($scenario);
             $this->replaceSceneContent($scenes);
         });
+    }
+
+    private function upsertNote(Scenario $scenario): void
+    {
+        $note = $scenario->note()->updateOrCreate(
+            [],
+            [
+                'title' => 'Before you eat at a restaurant',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will greet the waitress, ask for a table, order food and drink, and pay.',
+                    'Useful patterns:',
+                    '- Norėčiau staliuko, prašau. = I would like a table, please.',
+                    '- Ar galiu gauti meniu? = Can I get the menu?',
+                    '- Norėčiau sriubos, prašau. = I would like soup, please.',
+                    '- Vandens, prašau. = Water, please.',
+                    '- Mokėsiu kortele. = I will pay by card.',
+                    'Politeness tip: norėčiau and prašau are the safest A1 restaurant forms.',
+                ]),
+                'cefr_level' => 'a1',
+                'estimated_minutes' => 2,
+                'status' => ContentStatus::Published,
+            ],
+        );
+
+        $note->translations()->updateOrCreate(
+            ['field' => 'title', 'locale' => 'lt'],
+            ['value' => 'Prieš valgant restorane'],
+        );
+        $note->translations()->updateOrCreate(
+            ['field' => 'body', 'locale' => 'lt'],
+            ['value' => implode("\n\n", [
+                'Šiame scenarijuje pasisveikinsite su padavėja, paprašysite staliuko, užsisakysite maisto ir gėrimo bei sumokėsite.',
+                'Naudingos frazės:',
+                '- Norėčiau staliuko, prašau.',
+                '- Ar galiu gauti meniu?',
+                '- Norėčiau sriubos, prašau.',
+                '- Vandens, prašau.',
+                '- Mokėsiu kortele.',
+                'Mandagumo patarimas: norėčiau ir prašau yra saugios A1 lygio restorano frazės.',
+            ])],
+        );
     }
 
     /** @return Collection<string, Scene> */

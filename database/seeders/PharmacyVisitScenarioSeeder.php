@@ -43,9 +43,51 @@ class PharmacyVisitScenarioSeeder extends Seeder
                 ->whereNotIn('slug', collect($this->scenes())->pluck('slug')->all())
                 ->delete();
 
+            $this->upsertNote($scenario);
             $scenes = $this->upsertScenes($scenario);
             $this->replaceSceneContent($scenes);
         });
+    }
+
+    private function upsertNote(Scenario $scenario): void
+    {
+        $note = $scenario->note()->updateOrCreate(
+            [],
+            [
+                'title' => 'Before you speak at a pharmacy',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will greet the pharmacist, explain a simple health problem, ask about medicine, and pay.',
+                    'Useful patterns:',
+                    '- Man reikia pagalbos. = I need help.',
+                    '- Man skauda galvą. = My head hurts.',
+                    '- Man skauda gerklę. = My throat hurts.',
+                    '- Kiek tai kainuoja? = How much does this cost?',
+                    '- Kaip vartoti šį vaistą? = How should I take this medicine?',
+                    'Health pattern: man skauda + body part is the main A1 way to say something hurts.',
+                ]),
+                'cefr_level' => 'a1',
+                'estimated_minutes' => 2,
+                'status' => ContentStatus::Published,
+            ],
+        );
+
+        $note->translations()->updateOrCreate(
+            ['field' => 'title', 'locale' => 'lt'],
+            ['value' => 'Prieš kalbant vaistinėje'],
+        );
+        $note->translations()->updateOrCreate(
+            ['field' => 'body', 'locale' => 'lt'],
+            ['value' => implode("\n\n", [
+                'Šiame scenarijuje pasisveikinsite su vaistininku, paaiškinsite paprastą sveikatos problemą, paklausite apie vaistus ir sumokėsite.',
+                'Naudingos frazės:',
+                '- Man reikia pagalbos.',
+                '- Man skauda galvą.',
+                '- Man skauda gerklę.',
+                '- Kiek tai kainuoja?',
+                '- Kaip vartoti šį vaistą?',
+                'Sveikatos frazė: man skauda + kūno dalis yra pagrindinis A1 būdas pasakyti, kad kažką skauda.',
+            ])],
+        );
     }
 
     /** @return Collection<string, Scene> */

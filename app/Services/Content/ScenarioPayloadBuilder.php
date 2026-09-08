@@ -30,6 +30,7 @@ class ScenarioPayloadBuilder
             'character',
             'language',
             'translations',
+            'note.translations',
             'scenes.translations',
             'scenes.npcLines.translations',
             'scenes.npcLines.triggerGoal',

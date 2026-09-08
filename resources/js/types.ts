@@ -74,7 +74,18 @@ export interface ScenarioSummary {
 }
 
 export interface ScenarioDetail extends ScenarioSummary {
+    note: ScenarioNoteRecord | null;
     scenes: SceneRecord[];
+}
+
+export interface ScenarioNoteRecord {
+    id: number;
+    title: string;
+    body: string;
+    cefr_level: string | null;
+    estimated_minutes: number;
+    status: string;
+    translations: TranslationMap;
 }
 
 export interface ScenarioAuditIssue {

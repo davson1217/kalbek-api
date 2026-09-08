@@ -3,7 +3,7 @@ import { Save, Trash2 } from 'lucide-react';
 
 import { blankOptions, SelectField, Textarea, TextField } from '../FormControls';
 import { PrimaryButton, SecondaryButton } from '../PageChrome';
-import type { GoalRecord, NpcLineRecord, ScenePropRecord, SceneRecord, TranslationMap } from '../../../types';
+import type { GoalRecord, NpcLineRecord, ScenarioNoteRecord, ScenePropRecord, SceneRecord, TranslationMap } from '../../../types';
 
 type Method = 'post' | 'put';
 
@@ -21,6 +21,31 @@ export function SceneForm({ action, levels, method = 'post', onSuccess, scene }:
             </div>
             <TranslationFields fields={['title', 'setting']} translations={form.data.translations} onChange={(translations) => form.setData('translations', translations)} />
             <div className="md:col-span-2"><PrimaryButton type="submit" icon={Save} disabled={form.processing}>{scene ? 'Save scene' : 'Create scene'}</PrimaryButton></div>
+        </form>
+    );
+}
+
+export function ScenarioNoteForm({ action, levels, method = 'post', note, onSuccess, statuses }: { action: string; levels: string[]; method?: Method; note?: ScenarioNoteRecord; onSuccess?: () => void; statuses: string[] }) {
+    const form = useForm({
+        title: note?.title ?? '',
+        body: note?.body ?? '',
+        cefr_level: note?.cefr_level ?? '',
+        estimated_minutes: note?.estimated_minutes ?? 2,
+        status: note?.status ?? 'published',
+        translations: note?.translations ?? {},
+    });
+
+    return (
+        <form onSubmit={(event) => submit(event, form, action, method, onSuccess)} className="grid gap-4 md:grid-cols-2">
+            <TextField label="Note title" placeholder="Before you introduce yourself" help="A short learner-facing title for the preparation material shown before the scenario starts." value={form.data.title} onChange={(value) => form.setData('title', value)} error={form.errors.title} />
+            <SelectField label="CEFR" help="The level this preparation note supports. Use Inherit when it follows the scenario level." value={form.data.cefr_level} onChange={(value) => form.setData('cefr_level', String(value))} options={blankOptions(levels)} />
+            <TextField label="Reading time" placeholder="2" help="Estimated reading time in minutes. Keep notes short so learners can quickly start speaking." type="number" value={form.data.estimated_minutes} onChange={(value) => form.setData('estimated_minutes', Number(value))} error={form.errors.estimated_minutes} />
+            <SelectField label="Status" help="Draft notes stay in the CMS. Published notes appear before the scenario in the learner app." value={form.data.status} onChange={(value) => form.setData('status', String(value))} options={statuses.map((status) => ({ value: status, label: status }))} error={form.errors.status} />
+            <div className="md:col-span-2">
+                <Textarea label="Preparation material" placeholder={'Teach the learner what this scenario will test.\n\nExample:\n- Question: Iš kur jūs esate?\n- Pattern: Aš esu iš ...\n- Tip: š sounds like sh.'} help="Short teaching material shown before the roleplay. Include useful patterns, vocabulary, grammar, or pronunciation tips." value={form.data.body} onChange={(value) => form.setData('body', value)} error={form.errors.body} rows={9} />
+            </div>
+            <TranslationFields fields={['title', 'body']} translations={form.data.translations} onChange={(translations) => form.setData('translations', translations)} />
+            <div className="md:col-span-2"><PrimaryButton type="submit" icon={Save} disabled={form.processing}>{note ? 'Save note' : 'Create note'}</PrimaryButton></div>
         </form>
     );
 }

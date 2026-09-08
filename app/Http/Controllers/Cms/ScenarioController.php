@@ -50,6 +50,7 @@ class ScenarioController extends Controller
             'character',
             'language',
             'translations',
+            'note.translations',
             'scenes.translations',
             'scenes.npcLines.translations',
             'scenes.npcLines.triggerGoal',
@@ -140,6 +141,15 @@ class ScenarioController extends Controller
     {
         return [
             ...$this->summary($scenario),
+            'note' => $scenario->note ? [
+                'id' => $scenario->note->id,
+                'title' => $scenario->note->title,
+                'body' => $scenario->note->body,
+                'cefr_level' => $scenario->note->cefr_level?->value,
+                'estimated_minutes' => $scenario->note->estimated_minutes,
+                'status' => $scenario->note->status->value,
+                'translations' => $scenario->note->translationMap(),
+            ] : null,
             'scenes' => $scenario->scenes->map(fn ($scene): array => [
                 'id' => $scene->id,
                 'slug' => $scene->slug,

@@ -126,6 +126,21 @@ class ScenarioApiTest extends TestCase
             'locale' => 'lt',
             'value' => 'Mandagus restorano pasisveikinimas.',
         ]);
+        $note = $scenario->note()->updateOrCreate([], [
+            'title' => 'Before the restaurant',
+            'body' => 'Practise asking for a table.',
+            'cefr_level' => 'a1',
+            'estimated_minutes' => 2,
+            'status' => 'published',
+        ]);
+        $note->translations()->updateOrCreate(
+            ['field' => 'title', 'locale' => 'lt'],
+            ['value' => 'Prieš restoraną'],
+        );
+        $note->translations()->updateOrCreate(
+            ['field' => 'body', 'locale' => 'lt'],
+            ['value' => 'Mokykitės paprašyti staliuko.'],
+        );
 
         $this->getJson('/api/v1/scenarios/restoranas?app_language=lt')
             ->assertOk()
@@ -134,6 +149,9 @@ class ScenarioApiTest extends TestCase
             ->assertJsonPath('data.description', 'Mokykitės užsisakyti restorane.')
             ->assertJsonPath('data.scenes.0.title', 'Atvykimas')
             ->assertJsonPath('data.scenes.0.setting', 'Įeinate į restoraną.')
+            ->assertJsonPath('data.note.title', 'Prieš restoraną')
+            ->assertJsonPath('data.note.body', 'Mokykitės paprašyti staliuko.')
+            ->assertJsonPath('data.note.estimated_minutes', 2)
             ->assertJsonPath('data.scenes.0.goals.0.label', 'Paprašykite staliuko')
             ->assertJsonPath('data.scenes.0.goals.0.intent', 'Mandagiai pasisveikinti ir paprašyti staliuko.')
             ->assertJsonPath('data.scenes.0.lines.0.support_translation', 'Mandagus restorano pasisveikinimas.');
@@ -199,6 +217,33 @@ class ScenarioApiTest extends TestCase
             ->assertJsonPath('data.scenes.0.goals.0.next', 'priedai')
             ->assertJsonFragment(['trigger_goal_id' => 'cafe-coffee'])
             ->assertJsonFragment(['id' => 'cafe-pay-card', 'next' => null]);
+    }
+
+    public function test_current_seeded_scenarios_have_preparation_notes(): void
+    {
+        $this->seed([
+            CharacterSeeder::class,
+            A1ScenarioSeeder::class,
+            RestaurantScenarioSeeder::class,
+            PharmacyVisitScenarioSeeder::class,
+            EnglishShopScenarioSeeder::class,
+        ]);
+
+        $this->assertSame(11, Scenario::query()->count());
+        $this->assertSame(11, Scenario::query()->has('note')->count());
+
+        $this->getJson('/api/v1/scenarios/prisistatymas')
+            ->assertOk()
+            ->assertJsonPath('data.note.title', 'Before you introduce yourself')
+            ->assertJsonPath('data.note.cefr_level', 'a1');
+
+        $this->getJson('/api/v1/scenarios/pharmacy-visit')
+            ->assertOk()
+            ->assertJsonPath('data.note.title', 'Before you speak at a pharmacy');
+
+        $this->getJson('/api/v1/scenarios/at-the-shop')
+            ->assertOk()
+            ->assertJsonPath('data.note.title', 'Before you shop for simple items');
     }
 
     public function test_draft_scenarios_return_404_from_the_learner_api(): void

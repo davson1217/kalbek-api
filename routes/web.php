@@ -8,6 +8,7 @@ use App\Http\Controllers\Cms\GoalController;
 use App\Http\Controllers\Cms\LanguageController;
 use App\Http\Controllers\Cms\NpcLineController;
 use App\Http\Controllers\Cms\ScenarioController;
+use App\Http\Controllers\Cms\ScenarioNoteController;
 use App\Http\Controllers\Cms\SceneController;
 use App\Http\Controllers\Cms\ScenePropController;
 use Illuminate\Support\Facades\Route;
@@ -30,6 +31,9 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
         Route::resource('languages', LanguageController::class)->only(['index', 'store', 'update']);
         Route::resource('characters', CharacterController::class)->only(['index', 'store', 'update']);
         Route::resource('scenarios', ScenarioController::class)->only(['index', 'store', 'show', 'update']);
+        Route::post('scenarios/{scenario}/note', [ScenarioNoteController::class, 'store'])->name('scenarios.note.store');
+        Route::put('scenarios/{scenario}/note/{note}', [ScenarioNoteController::class, 'update'])->name('scenarios.note.update');
+        Route::delete('scenarios/{scenario}/note/{note}', [ScenarioNoteController::class, 'destroy'])->name('scenarios.note.destroy');
         Route::post('scenarios/{scenario}/scenes', [SceneController::class, 'store'])->name('scenarios.scenes.store');
         Route::put('scenarios/{scenario}/scenes/{scene}', [SceneController::class, 'update'])->name('scenarios.scenes.update');
         Route::delete('scenarios/{scenario}/scenes/{scene}', [SceneController::class, 'destroy'])->name('scenarios.scenes.destroy');

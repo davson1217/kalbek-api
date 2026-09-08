@@ -39,9 +39,33 @@ class EnglishShopScenarioSeeder extends Seeder
                 ],
             );
 
+            $this->upsertNote($scenario);
             $scenes = $this->upsertScenes($scenario, $this->scenes());
             $this->replaceSceneContent($scenes, $this->scenes());
         });
+    }
+
+    private function upsertNote(Scenario $scenario): void
+    {
+        $scenario->note()->updateOrCreate(
+            [],
+            [
+                'title' => 'Before you shop for simple items',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will ask where common items are, ask the price, ask for a bag, and pay.',
+                    'Useful patterns:',
+                    '- Where is the milk?',
+                    '- Where is the bread?',
+                    '- How much does it cost?',
+                    '- Do you have a bag?',
+                    '- I will pay by card.',
+                    'Speaking tip: use clear short questions first. Add please when you want to sound more polite.',
+                ]),
+                'cefr_level' => 'a1',
+                'estimated_minutes' => 2,
+                'status' => ContentStatus::Published,
+            ],
+        );
     }
 
     /**

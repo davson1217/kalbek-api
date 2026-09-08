@@ -46,6 +46,18 @@ class ScenarioResource extends JsonResource
             'available' => $this->getAttribute('available_for_user') ?? true,
             'availability_reason' => $this->getAttribute('availability_reason'),
             'start_scene_id' => $this->start_scene_slug,
+            'note' => $this->whenLoaded('note', function () use ($locale): ?array {
+                if (! $this->note || $this->note->status->value !== 'published') {
+                    return null;
+                }
+
+                return [
+                    'title' => $this->note->translated('title', $locale, $this->note->title),
+                    'body' => $this->note->translated('body', $locale, $this->note->body),
+                    'cefr_level' => $this->note->cefr_level?->value,
+                    'estimated_minutes' => $this->note->estimated_minutes,
+                ];
+            }),
             'scenes' => $this->whenLoaded('scenes', fn () => $this->scenes->map(fn ($scene): array => [
                 'id' => $scene->slug,
                 'title' => $scene->translated('title', $locale, $scene->title ?? $scene->slug),

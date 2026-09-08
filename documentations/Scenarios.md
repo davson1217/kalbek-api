@@ -58,6 +58,23 @@ Important columns:
 
 Business rule: a published scenario should have a valid `start_scene_slug`, at least one scene, and a coherent CEFR level.
 
+### Preparation Note
+
+A preparation note is short teaching material attached to one scenario. It appears before the learner starts the role-play and explains the key phrases, grammar, vocabulary, or pronunciation points that the scenario will test.
+
+Database: `scenario_notes`
+
+Important columns:
+
+- `scenario_id`: owner scenario. This is unique, so a scenario can have only one preparation note.
+- `title`: learner-facing note title.
+- `body`: teaching material. The first version uses plain text with line breaks.
+- `cefr_level`: optional note level; usually matches the scenario level.
+- `estimated_minutes`: learner-facing reading time.
+- `status`: draft, published, or archived.
+
+Business rule: preparation notes teach before testing. They should be practical and short, not full grammar chapters. Draft notes stay in the CMS; published notes appear in the learner app before the scenario starts.
+
 ### Scene
 
 A scene is one step in the conversation. It represents a local situation inside the scenario, such as greeting, ordering, payment, or farewell.
@@ -135,13 +152,15 @@ Important columns:
 ## Runtime Flow
 
 1. The frontend loads a scenario by `scenarios.slug` from the API.
-2. The frontend enters `scenarios.start_scene_slug`.
-3. The scene selects an opening `npc_lines` record where `trigger_goal_id` is `null`.
-4. The learner chooses one `goals` option and records speech.
-5. The API transcribes the audio and asks the SpeakingJudge whether the transcript satisfies `goals.intent` at the relevant CEFR level.
-6. If the response can continue, the authored flow advances by `goals.next_scene_id`.
-7. The character reply is selected from `npc_lines` where `trigger_goal_id` matches the completed goal.
-8. If there is no next scene, the conversation prepares to finish after the final reply.
+2. If the scenario has a published `scenario_notes` row, the frontend shows the preparation note first.
+3. The learner taps “Start speaking.”
+4. The frontend enters `scenarios.start_scene_slug`.
+5. The scene selects an opening `npc_lines` record where `trigger_goal_id` is `null`.
+6. The learner chooses one `goals` option and records speech.
+7. The API transcribes the audio and asks the SpeakingJudge whether the transcript satisfies `goals.intent` at the relevant CEFR level.
+8. If the response can continue, the authored flow advances by `goals.next_scene_id`.
+9. The character reply is selected from `npc_lines` where `trigger_goal_id` matches the completed goal.
+10. If there is no next scene, the conversation prepares to finish after the final reply.
 
 Important: AI does not choose the next scene. Authored CMS relationships control progression.
 
@@ -197,6 +216,7 @@ In the CMS, open a scenario and use the Flow QA panel. Critical issues should bl
 - Avoid learner-specific assumptions in replies unless the goal requires that specific answer.
 - Set CEFR levels on scenario, scene, goal, and NPC lines so future learner-level logic can select content safely.
 - Use scene props for visible vocabulary/context, not for conversation control.
+- Use preparation notes to teach the language pattern before the role-play starts.
 
 ## Suggested Documentation Backlog
 

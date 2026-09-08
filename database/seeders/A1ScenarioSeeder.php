@@ -41,10 +41,232 @@ class A1ScenarioSeeder extends Seeder
                     ],
                 );
 
+                $this->upsertNote($scenario, $scenarioData['note'] ?? $this->defaultNoteFor($scenarioData['slug']));
                 $scenes = $this->upsertScenes($scenario, $scenarioData['scenes']);
                 $this->replaceSceneContent($scenes, $scenarioData['scenes']);
             }
         });
+    }
+
+    private function upsertNote(Scenario $scenario, ?array $note): void
+    {
+        if (! $note) {
+            return;
+        }
+
+        $model = $scenario->note()->updateOrCreate(
+            [],
+            [
+                'title' => $note['title'],
+                'body' => $note['body'],
+                'cefr_level' => $note['cefr_level'] ?? 'a1',
+                'estimated_minutes' => $note['estimated_minutes'] ?? 2,
+                'status' => $note['status'] ?? ContentStatus::Published,
+            ],
+        );
+
+        foreach ($note['translations'] ?? [] as $field => $translations) {
+            foreach ($translations as $locale => $value) {
+                $model->translations()->updateOrCreate(
+                    ['field' => $field, 'locale' => $locale],
+                    ['value' => $value],
+                );
+            }
+        }
+    }
+
+    private function defaultNoteFor(string $slug): ?array
+    {
+        return match ($slug) {
+            'kavineje' => [
+                'title' => 'Before you order at a cafe',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will order a simple drink, answer about milk or sugar, and pay.',
+                    'Useful patterns:',
+                    '- Norėčiau kavos, prašau. = I would like coffee, please.',
+                    '- Norėčiau arbatos, prašau. = I would like tea, please.',
+                    '- Prašau cukraus. = Sugar, please.',
+                    '- Be pieno, prašau. = Without milk, please.',
+                    '- Mokėsiu kortele. = I will pay by card.',
+                    'Grammar tip: norėčiau is a polite way to say “I would like.” Use prašau to sound polite.',
+                ]),
+                'estimated_minutes' => 2,
+                'translations' => [
+                    'title' => ['lt' => 'Prieš užsakant kavinėje'],
+                    'body' => ['lt' => implode("\n\n", [
+                        'Šiame scenarijuje užsisakysite paprastą gėrimą, atsakysite apie pieną ar cukrų ir sumokėsite.',
+                        'Naudingos frazės:',
+                        '- Norėčiau kavos, prašau.',
+                        '- Norėčiau arbatos, prašau.',
+                        '- Prašau cukraus.',
+                        '- Be pieno, prašau.',
+                        '- Mokėsiu kortele.',
+                        'Gramatikos patarimas: norėčiau yra mandagi forma. Žodis prašau padeda skambėti mandagiai.',
+                    ])],
+                ],
+            ],
+            'parduotuveje' => [
+                'title' => 'Before you shop for simple items',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will ask where an item is, ask the price, ask for a bag, and pay.',
+                    'Useful patterns:',
+                    '- Kur yra pienas? = Where is the milk?',
+                    '- Kur yra duona? = Where is the bread?',
+                    '- Kiek tai kainuoja? = How much does this cost?',
+                    '- Ar turite maišelį? = Do you have a bag?',
+                    '- Mokėsiu kortele. = I will pay by card.',
+                    'Question word: kur means “where.” Kiek means “how much” or “how many.”',
+                ]),
+                'estimated_minutes' => 2,
+                'translations' => [
+                    'title' => ['lt' => 'Prieš apsiperkant parduotuvėje'],
+                    'body' => ['lt' => implode("\n\n", [
+                        'Šiame scenarijuje paklausite, kur yra prekė, paklausite kainos, paprašysite maišelio ir sumokėsite.',
+                        'Naudingos frazės:',
+                        '- Kur yra pienas?',
+                        '- Kur yra duona?',
+                        '- Kiek tai kainuoja?',
+                        '- Ar turite maišelį?',
+                        '- Mokėsiu kortele.',
+                        'Klausiamieji žodžiai: kur reiškia vietą. Kiek vartojame klausdami kainos ar kiekio.',
+                    ])],
+                ],
+            ],
+            'viesbutyje' => [
+                'title' => 'Before you check in at a hotel',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will check in, give your name, and ask about breakfast.',
+                    'Useful patterns:',
+                    '- Turiu rezervaciją. = I have a reservation.',
+                    '- Man reikia kambario. = I need a room.',
+                    '- Mano vardas ... = My name is ...',
+                    '- Kada yra pusryčiai? = When is breakfast?',
+                    '- Ačiū. Labanakt. = Thank you. Good night.',
+                    'Grammar tip: turiu means “I have.” Man reikia means “I need.”',
+                ]),
+                'estimated_minutes' => 2,
+                'translations' => [
+                    'title' => ['lt' => 'Prieš registruojantis viešbutyje'],
+                    'body' => ['lt' => implode("\n\n", [
+                        'Šiame scenarijuje užsiregistruosite viešbutyje, pasakysite savo vardą ir paklausite apie pusryčius.',
+                        'Naudingos frazės:',
+                        '- Turiu rezervaciją.',
+                        '- Man reikia kambario.',
+                        '- Mano vardas ...',
+                        '- Kada yra pusryčiai?',
+                        '- Ačiū. Labanakt.',
+                        'Gramatikos patarimas: turiu reiškia „I have“. Man reikia reiškia „I need“.',
+                    ])],
+                ],
+            ],
+            'autobuse' => [
+                'title' => 'Before you buy a bus ticket',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will buy a ticket, say your destination, ask about payment, and ask where to get off.',
+                    'Useful patterns:',
+                    '- Vieną bilietą į centrą, prašau. = One ticket to the center, please.',
+                    '- Vieną bilietą į stotį, prašau. = One ticket to the station, please.',
+                    '- Ar galima mokėti kortele? = Can I pay by card?',
+                    '- Kur man išlipti? = Where should I get off?',
+                    'Travel tip: į means “to” when talking about direction or destination.',
+                ]),
+                'estimated_minutes' => 2,
+                'translations' => [
+                    'title' => ['lt' => 'Prieš perkant autobuso bilietą'],
+                    'body' => ['lt' => implode("\n\n", [
+                        'Šiame scenarijuje nusipirksite bilietą, pasakysite kelionės tikslą, paklausite apie mokėjimą ir kur išlipti.',
+                        'Naudingos frazės:',
+                        '- Vieną bilietą į centrą, prašau.',
+                        '- Vieną bilietą į stotį, prašau.',
+                        '- Ar galima mokėti kortele?',
+                        '- Kur man išlipti?',
+                        'Kelionės patarimas: į vartojame kalbėdami apie kryptį ar kelionės tikslą.',
+                    ])],
+                ],
+            ],
+            'mieste' => [
+                'title' => 'Before you ask for directions',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will ask for help, say you are lost, ask where a place is, and confirm directions.',
+                    'Useful patterns:',
+                    '- Atsiprašau, galite padėti? = Excuse me, can you help?',
+                    '- Aš pasiklydau. = I am lost.',
+                    '- Kur yra stotis? = Where is the station?',
+                    '- Kur yra vaistinė? = Where is the pharmacy?',
+                    '- Ar man eiti tiesiai? = Should I go straight?',
+                    'Politeness tip: atsiprašau is useful before asking a stranger for help.',
+                ]),
+                'estimated_minutes' => 2,
+                'translations' => [
+                    'title' => ['lt' => 'Prieš klausiant kelio mieste'],
+                    'body' => ['lt' => implode("\n\n", [
+                        'Šiame scenarijuje paprašysite pagalbos, pasakysite, kad pasiklydote, paklausite, kur yra vieta, ir pasitikslinsite kryptį.',
+                        'Naudingos frazės:',
+                        '- Atsiprašau, galite padėti?',
+                        '- Aš pasiklydau.',
+                        '- Kur yra stotis?',
+                        '- Kur yra vaistinė?',
+                        '- Ar man eiti tiesiai?',
+                        'Mandagumo patarimas: atsiprašau tinka prieš kreipiantis pagalbos į nepažįstamą žmogų.',
+                    ])],
+                ],
+            ],
+            'pas-gydytoja' => [
+                'title' => 'Before you speak to a doctor',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will say what hurts, answer about fever, and ask how to take medicine.',
+                    'Useful patterns:',
+                    '- Man skauda galvą. = My head hurts.',
+                    '- Man skauda gerklę. = My throat hurts.',
+                    '- Turiu temperatūros. = I have a fever.',
+                    '- Temperatūros neturiu. = I do not have a fever.',
+                    '- Kaip vartoti vaistus? = How should I take the medicine?',
+                    'Health pattern: man skauda + body part means “my ... hurts.”',
+                ]),
+                'estimated_minutes' => 2,
+                'translations' => [
+                    'title' => ['lt' => 'Prieš kalbant su gydytoju'],
+                    'body' => ['lt' => implode("\n\n", [
+                        'Šiame scenarijuje pasakysite, ką skauda, atsakysite apie temperatūrą ir paklausite, kaip vartoti vaistus.',
+                        'Naudingos frazės:',
+                        '- Man skauda galvą.',
+                        '- Man skauda gerklę.',
+                        '- Turiu temperatūros.',
+                        '- Temperatūros neturiu.',
+                        '- Kaip vartoti vaistus?',
+                        'Sveikatos frazė: man skauda + kūno dalis reiškia, kad ta vieta skauda.',
+                    ])],
+                ],
+            ],
+            'klaseje' => [
+                'title' => 'Before you speak in class',
+                'body' => implode("\n\n", [
+                    'In this scenario, you will greet the teacher, say you are ready, say you do not understand, and ask the teacher to repeat.',
+                    'Useful patterns:',
+                    '- Labas rytas, mokytoja. = Good morning, teacher.',
+                    '- Aš pasiruošęs. = I am ready.',
+                    '- Aš nesuprantu. = I do not understand.',
+                    '- Prašau pakartoti. = Please repeat.',
+                    '- Iki pasimatymo. = See you later.',
+                    'Classroom tip: prašau makes requests sound polite.',
+                ]),
+                'estimated_minutes' => 2,
+                'translations' => [
+                    'title' => ['lt' => 'Prieš kalbant klasėje'],
+                    'body' => ['lt' => implode("\n\n", [
+                        'Šiame scenarijuje pasisveikinsite su mokytoja, pasakysite, kad esate pasiruošę, pasakysite, kad nesuprantate, ir paprašysite pakartoti.',
+                        'Naudingos frazės:',
+                        '- Labas rytas, mokytoja.',
+                        '- Aš pasiruošęs.',
+                        '- Aš nesuprantu.',
+                        '- Prašau pakartoti.',
+                        '- Iki pasimatymo.',
+                        'Klasės patarimas: prašau padeda prašymui skambėti mandagiai.',
+                    ])],
+                ],
+            ],
+            default => null,
+        };
     }
 
     /**
@@ -137,6 +359,39 @@ class A1ScenarioSeeder extends Seeder
                 'is_free' => true,
                 'sort_order' => 10,
                 'start_scene' => 'pasisveikinimas',
+                'note' => [
+                    'title' => 'Before you introduce yourself',
+                    'body' => implode("\n\n", [
+                        "In this scenario, you will introduce yourself and answer simple personal questions.",
+                        "Useful patterns:",
+                        "- Mano vardas ... = My name is ...",
+                        "- Aš esu ... = I am ...",
+                        "- Aš esu iš ... = I am from ...",
+                        "- Aš kalbu ... = I speak ...",
+                        "Question words:",
+                        "- Kuo tu vardu? = What is your name? (informal)",
+                        "- Koks jūsų vardas? = What is your name? (polite)",
+                        "- Iš kur jūs esate? = Where are you from?",
+                        "Pronunciation tip: š sounds like sh, and ų is a long oo-like sound.",
+                    ]),
+                    'estimated_minutes' => 2,
+                    'translations' => [
+                        'title' => ['lt' => 'Prieš prisistatant'],
+                        'body' => ['lt' => implode("\n\n", [
+                            'Šiame scenarijuje prisistatysite ir atsakysite į paprastus asmeninius klausimus.',
+                            'Naudingos frazės:',
+                            '- Mano vardas ...',
+                            '- Aš esu ...',
+                            '- Aš esu iš ...',
+                            '- Aš kalbu ...',
+                            'Klausiamieji žodžiai:',
+                            '- Kuo tu vardu?',
+                            '- Koks jūsų vardas?',
+                            '- Iš kur jūs esate?',
+                            'Tarimo patarimas: š tariama kaip angliškas sh, o ų yra ilgas ū tipo garsas.',
+                        ])],
+                    ],
+                ],
                 'scenes' => [
                     [
                         'slug' => 'pasisveikinimas',
