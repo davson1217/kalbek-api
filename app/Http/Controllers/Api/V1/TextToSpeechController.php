@@ -6,6 +6,7 @@ use App\Contracts\TextToSpeechSynthesizer;
 use App\Exceptions\AudioGenerationInProgress;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\TextToSpeechRequest;
+use App\Models\Character;
 use App\Models\Language;
 use Illuminate\Http\Response;
 
@@ -16,13 +17,20 @@ class TextToSpeechController extends Controller
         $data = $request->validated();
         $text = trim((string) $data['text']);
         $language = Language::query()->where('code', $data['language'] ?? 'lt')->first();
+        $character = isset($data['character'])
+            ? Character::query()
+                ->where('slug', $data['character'])
+                ->when($language, fn ($query) => $query->where('language_id', $language->id))
+                ->first()
+            : null;
 
         try {
             $audio = $synthesizer->synthesize(
                 $text,
                 $language?->code ?? 'lt',
                 $language?->name ?? 'Lithuanian',
-                $language?->default_voice,
+                $character?->tts_voice ?: $language?->default_voice,
+                $character?->speaking_style,
             );
         } catch (AudioGenerationInProgress $exception) {
             return response($exception->getMessage(), 503, [

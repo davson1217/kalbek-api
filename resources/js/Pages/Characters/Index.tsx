@@ -12,6 +12,7 @@ interface Props {
     characters: CharacterRecord[];
     statuses: string[];
     languages: LanguageOption[];
+    ttsVoiceOptions: Array<{ value: string; label: string }>;
 }
 
 const emptyCharacter = {
@@ -21,13 +22,15 @@ const emptyCharacter = {
     role: '',
     image_path: '',
     intro: '',
+    tts_voice: '',
+    speaking_style: '',
     praise_lines: '',
     encouragement_lines: '',
     sort_order: 0,
     status: 'draft',
 };
 
-export default function CharactersIndex({ characters, statuses, languages }: Props) {
+export default function CharactersIndex({ characters, statuses, languages, ttsVoiceOptions }: Props) {
     const [query, setQuery] = useState('');
     const [creating, setCreating] = useState(false);
     const [editing, setEditing] = useState<CharacterRecord | null>(null);
@@ -102,7 +105,7 @@ export default function CharactersIndex({ characters, statuses, languages }: Pro
                 description="Create a speaker that can be attached to scenarios in the selected target language."
                 onClose={() => setCreating(false)}
             >
-                <CharacterForm languages={languages} statuses={statuses} onSuccess={() => setCreating(false)} />
+                <CharacterForm languages={languages} statuses={statuses} ttsVoiceOptions={ttsVoiceOptions} onSuccess={() => setCreating(false)} />
             </Modal>
 
             <Modal
@@ -111,7 +114,7 @@ export default function CharactersIndex({ characters, statuses, languages }: Pro
                 description="Tune the character profile, status, and short feedback lines used during speaking practice."
                 onClose={() => setEditing(null)}
             >
-                {editing ? <CharacterForm character={editing} languages={languages} statuses={statuses} onSuccess={() => setEditing(null)} /> : null}
+                {editing ? <CharacterForm character={editing} languages={languages} statuses={statuses} ttsVoiceOptions={ttsVoiceOptions} onSuccess={() => setEditing(null)} /> : null}
             </Modal>
         </CmsLayout>
     );
@@ -136,6 +139,7 @@ function CharacterRow({ character, languages, onEdit }: { character: CharacterRe
                         </p>
                         <div className="mt-3 flex flex-wrap gap-2">
                             <StatusBadge>{character.scenarios_count} scenarios</StatusBadge>
+                            {character.tts_voice ? <StatusBadge>voice {character.tts_voice}</StatusBadge> : null}
                             <StatusBadge>{character.praise_lines.length} praise lines</StatusBadge>
                             <StatusBadge>{character.encouragement_lines.length} encouragement lines</StatusBadge>
                             <StatusBadge>sort {character.sort_order}</StatusBadge>
@@ -148,7 +152,7 @@ function CharacterRow({ character, languages, onEdit }: { character: CharacterRe
     );
 }
 
-function CharacterForm({ character, languages, statuses, onSuccess }: { character?: CharacterRecord; languages: LanguageOption[]; statuses: string[]; onSuccess: () => void }) {
+function CharacterForm({ character, languages, statuses, ttsVoiceOptions, onSuccess }: { character?: CharacterRecord; languages: LanguageOption[]; statuses: string[]; ttsVoiceOptions: Array<{ value: string; label: string }>; onSuccess: () => void }) {
     const form = useForm({
         language_id: character?.language_id ?? languages[0]?.id ?? emptyCharacter.language_id,
         slug: character?.slug ?? emptyCharacter.slug,
@@ -156,6 +160,8 @@ function CharacterForm({ character, languages, statuses, onSuccess }: { characte
         role: character?.role ?? emptyCharacter.role,
         image_path: character?.image_path ?? emptyCharacter.image_path,
         intro: character?.intro ?? emptyCharacter.intro,
+        tts_voice: character?.tts_voice ?? emptyCharacter.tts_voice,
+        speaking_style: character?.speaking_style ?? emptyCharacter.speaking_style,
         praise_lines: character?.praise_lines.join('\n') ?? emptyCharacter.praise_lines,
         encouragement_lines: character?.encouragement_lines.join('\n') ?? emptyCharacter.encouragement_lines,
         sort_order: character?.sort_order ?? emptyCharacter.sort_order,
@@ -240,6 +246,17 @@ function CharacterForm({ character, languages, statuses, onSuccess }: { characte
                 onChange={(value) => form.setData('sort_order', Number(value))}
                 error={form.errors.sort_order}
             />
+            <SelectField
+                label="TTS voice"
+                help="Optional provider voice used for this character. Leave inherited to use the target language default voice."
+                value={form.data.tts_voice}
+                onChange={(value) => form.setData('tts_voice', String(value))}
+                options={[
+                    { value: '', label: 'Use language default' },
+                    ...ttsVoiceOptions,
+                ]}
+                error={form.errors.tts_voice}
+            />
             <div className="md:col-span-2">
                 <Textarea
                     label="Intro"
@@ -248,6 +265,17 @@ function CharacterForm({ character, languages, statuses, onSuccess }: { characte
                     value={form.data.intro}
                     onChange={(value) => form.setData('intro', value)}
                     error={form.errors.intro}
+                    rows={3}
+                />
+            </div>
+            <div className="md:col-span-2">
+                <Textarea
+                    label="Speaking style"
+                    placeholder="Warm, friendly, clear, and slightly slow, like a patient native speaker."
+                    help="Optional TTS direction used when this character's lines are spoken. Keep it concise and stable."
+                    value={form.data.speaking_style}
+                    onChange={(value) => form.setData('speaking_style', value)}
+                    error={form.errors.speaking_style}
                     rows={3}
                 />
             </div>

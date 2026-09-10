@@ -44,6 +44,8 @@ export interface CharacterRecord extends CharacterOption {
     role: string;
     image_path: string | null;
     intro: string | null;
+    tts_voice: string | null;
+    speaking_style: string | null;
     praise_lines: string[];
     encouragement_lines: string[];
     sort_order: number;

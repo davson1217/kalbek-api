@@ -37,6 +37,8 @@ class CharacterController extends Controller
                     'role' => $character->role,
                     'image_path' => $character->image_path,
                     'intro' => $character->intro,
+                    'tts_voice' => $character->tts_voice,
+                    'speaking_style' => $character->speaking_style,
                     'praise_lines' => $character->praise_lines,
                     'encouragement_lines' => $character->encouragement_lines,
                     'sort_order' => $character->sort_order,
@@ -45,6 +47,7 @@ class CharacterController extends Controller
                 ]),
             'statuses' => array_column(ContentStatus::cases(), 'value'),
             'languages' => $this->languageOptions(),
+            'ttsVoiceOptions' => $this->ttsVoiceOptions(),
         ]);
     }
 
@@ -71,6 +74,8 @@ class CharacterController extends Controller
             'role' => ['required', 'string', 'max:120'],
             'image_path' => ['nullable', 'string', 'max:255'],
             'intro' => ['nullable', 'string', 'max:500'],
+            'tts_voice' => ['nullable', 'string', 'max:120'],
+            'speaking_style' => ['nullable', 'string', 'max:1000'],
             'praise_lines' => ['nullable', 'string'],
             'encouragement_lines' => ['nullable', 'string'],
             'sort_order' => ['required', 'integer', 'min:0'],
@@ -107,6 +112,24 @@ class CharacterController extends Controller
                 'support_language_code' => $language->support_language_code,
                 'support_language_name' => $language->support_language_name,
             ])
+            ->all();
+    }
+
+    private function ttsVoiceOptions(): array
+    {
+        $groups = config('services.kalbek.tts_voice_options', []);
+        $model = strtolower((string) config('services.kalbek.tts_model', ''));
+        $provider = strtolower((string) config('ai.default_for_audio', config('ai.default', '')));
+        $group = str_contains($model, 'gemini') || str_contains($provider, 'gemini') || str_contains($provider, 'openrouter')
+            ? 'gemini'
+            : 'openai';
+
+        return collect($groups[$group] ?? [])
+            ->map(fn (string $label, string $value): array => [
+                'value' => $value,
+                'label' => $label,
+            ])
+            ->values()
             ->all();
     }
 }

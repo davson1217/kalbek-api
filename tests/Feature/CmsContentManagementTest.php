@@ -31,6 +31,20 @@ class CmsContentManagementTest extends TestCase
                 ->has('scenarios', 1));
     }
 
+    public function test_admin_can_view_character_voice_options(): void
+    {
+        $this->seed([CharacterSeeder::class, RestaurantScenarioSeeder::class]);
+        $admin = User::factory()->create(['role' => 'admin']);
+
+        $this->actingAs($admin)->get(route('cms.characters.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Characters/Index')
+                ->has('characters', 3)
+                ->has('ttsVoiceOptions')
+                ->where('ttsVoiceOptions.0.value', 'Zephyr'));
+    }
+
     public function test_admin_can_manage_languages(): void
     {
         $admin = User::factory()->create(['role' => 'admin']);

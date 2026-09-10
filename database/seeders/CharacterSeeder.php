@@ -24,6 +24,8 @@ class CharacterSeeder extends Seeder
                 'role' => 'your speaking coach',
                 'image_path' => 'characters/gabija.png',
                 'intro' => "Sveiki! Choose a scene and let's speak Lithuanian out loud.",
+                'tts_voice' => 'default-female',
+                'speaking_style' => 'Warm, encouraging, clear, and slightly slow, like a patient Lithuanian speaking coach.',
                 'praise_lines' => ['Puiku!', 'Šaunuolis!', 'Labai gerai!'],
                 'encouragement_lines' => ['Bandyk dar kartą.', 'Beveik pavyko!', 'Nieko tokio — pakartok.'],
                 'sort_order' => 10,
@@ -36,6 +38,8 @@ class CharacterSeeder extends Seeder
                 'role' => 'the waitress',
                 'image_path' => 'characters/rasa.png',
                 'intro' => 'Laba diena! Sveiki atvykę.',
+                'tts_voice' => 'default-female',
+                'speaking_style' => 'Friendly, practical, and natural, like a patient service worker speaking clearly to a beginner.',
                 'praise_lines' => ['Puiku!', 'Supratau, ačiū!', 'Labai gerai pasakyta.'],
                 'encouragement_lines' => [
                     'Atsiprašau, nesupratau. Pakartokite, prašau.',
@@ -52,6 +56,8 @@ class CharacterSeeder extends Seeder
                 'role' => 'the shop assistant',
                 'image_path' => 'characters/emily.png',
                 'intro' => "Hello! Choose a scene and let's speak English out loud.",
+                'tts_voice' => 'default-female',
+                'speaking_style' => 'Friendly, clear, and slightly slow, like a helpful shop assistant speaking to a beginner.',
                 'praise_lines' => ['Great!', 'Very good!', 'Nicely said.'],
                 'encouragement_lines' => [
                     'Try once more.',

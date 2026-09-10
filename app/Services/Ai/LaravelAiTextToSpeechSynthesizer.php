@@ -19,11 +19,12 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
      */
     private ?array $lastStorageFailure = null;
 
-    public function synthesize(string $text, string $languageCode = 'lt', string $languageName = 'Lithuanian', ?string $voice = null): SynthesizedAudio
+    public function synthesize(string $text, string $languageCode = 'lt', string $languageName = 'Lithuanian', ?string $voice = null, ?string $speakingStyle = null): SynthesizedAudio
     {
         $voice ??= 'default-female';
+        $speakingStyle = trim($speakingStyle ?: '');
         $model = config('services.kalbek.tts_model', 'gpt-4o-mini-tts');
-        $cacheKey = hash('sha256', "{$languageCode}|{$model}|{$voice}|{$text}");
+        $cacheKey = hash('sha256', "{$languageCode}|{$model}|{$voice}|{$speakingStyle}|{$text}");
 
         if ($cached = $this->cachedAudio($cacheKey)) {
             return $cached;
@@ -41,6 +42,7 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
                     $model,
                     $text,
                     $voice,
+                    $speakingStyle,
                 ),
             );
         } catch (LockTimeoutException) {
@@ -52,7 +54,7 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
         }
     }
 
-    private function synthesizeAfterLock(string $cacheKey, string $languageName, string $model, string $text, string $voice): SynthesizedAudio
+    private function synthesizeAfterLock(string $cacheKey, string $languageName, string $model, string $text, string $voice, string $speakingStyle): SynthesizedAudio
     {
         if ($cached = $this->cachedAudio($cacheKey)) {
             return $cached;
@@ -60,7 +62,7 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
 
         $audio = Audio::of($text)
             ->voice($voice)
-            ->instructions("Speak in clear, natural {$languageName} with correct {$languageName} pronunciation and stress. Warm, friendly, and slightly slow, like a patient native speaker in an everyday conversation.")
+            ->instructions($this->instructions($languageName, $speakingStyle))
             ->timeout(45)
             ->generate(model: $model);
 
@@ -150,6 +152,17 @@ class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
     private function metadataCacheKey(string $cacheKey): string
     {
         return "tts:generated-audio:{$cacheKey}";
+    }
+
+    private function instructions(string $languageName, string $speakingStyle): string
+    {
+        $base = "Speak in clear, natural {$languageName} with correct {$languageName} pronunciation and stress.";
+
+        if ($speakingStyle !== '') {
+            return "{$base} {$speakingStyle}";
+        }
+
+        return "{$base} Warm, friendly, and slightly slow, like a patient native speaker in an everyday conversation.";
     }
 
     private function generatedAudioDisk(): string

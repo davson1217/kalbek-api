@@ -25,6 +25,7 @@ class TextToSpeechRequest extends FormRequest
         return [
             'text' => ['required', 'string', 'max:300'],
             'language' => ['nullable', 'string', 'max:10', 'exists:languages,code'],
+            'character' => ['nullable', 'string', 'max:80', 'exists:characters,slug'],
         ];
     }
 }

@@ -27,10 +27,13 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         string $feedbackLanguageCode = 'en',
         string $feedbackLanguageName = 'English',
     ): array {
+        $transcriptionProvider = config('ai.default_for_transcription');
+        $transcriptionModel = config('services.kalbek.transcription_model');
+
         $transcript = trim((string) Transcription::fromUpload($audio)
             ->language($targetLanguageCode)
             ->timeout(45)
-            ->generate());
+            ->generate(provider: $transcriptionProvider, model: $transcriptionModel));
 
         if ($transcript === '') {
             return [

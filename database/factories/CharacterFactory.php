@@ -34,6 +34,8 @@ class CharacterFactory extends Factory
             'role' => fake()->words(3, true),
             'image_path' => null,
             'intro' => fake()->sentence(),
+            'tts_voice' => null,
+            'speaking_style' => null,
             'praise_lines' => [fake()->sentence()],
             'encouragement_lines' => [fake()->sentence()],
             'sort_order' => fake()->numberBetween(1, 50),

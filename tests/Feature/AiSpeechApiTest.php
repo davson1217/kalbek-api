@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Ai\Agents\SpeakingJudge;
+use App\Models\Character;
 use App\Models\GeneratedAudio;
 use App\Models\Goal;
+use App\Models\Language;
 use App\Models\LearnerLanguageLevel;
 use App\Models\NpcLine;
 use App\Models\Scenario;
@@ -180,6 +182,45 @@ class AiSpeechApiTest extends TestCase
             ->assertJsonValidationErrors('text');
     }
 
+    public function test_text_to_speech_can_use_character_voice_and_speaking_style(): void
+    {
+        Cache::flush();
+        Storage::fake('local');
+        Audio::fake([
+            base64_encode('rasa-audio'),
+            base64_encode('gabija-audio'),
+        ]);
+        $this->seed(CharacterSeeder::class);
+
+        Language::query()->where('code', 'lt')->update(['default_voice' => 'language-default']);
+        Character::query()->where('slug', 'rasa')->update([
+            'tts_voice' => 'rasa-voice',
+            'speaking_style' => 'Friendly and practical, like a restaurant worker.',
+        ]);
+        Character::query()->where('slug', 'gabija')->update([
+            'tts_voice' => 'gabija-voice',
+            'speaking_style' => 'Warm and encouraging, like a speaking coach.',
+        ]);
+
+        $this->get('/api/v1/tts?text=Laba%20diena&language=lt&character=rasa')
+            ->assertOk()
+            ->assertContent('rasa-audio');
+
+        $this->get('/api/v1/tts?text=Laba%20diena&language=lt&character=gabija')
+            ->assertOk()
+            ->assertContent('gabija-audio');
+
+        $this->assertDatabaseHas('generated_audio', [
+            'text' => 'Laba diena',
+            'voice' => 'rasa-voice',
+        ]);
+        $this->assertDatabaseHas('generated_audio', [
+            'text' => 'Laba diena',
+            'voice' => 'gabija-voice',
+        ]);
+        $this->assertSame(2, GeneratedAudio::query()->where('text', 'Laba diena')->count());
+    }
+
     public function test_fake_text_to_speech_returns_local_audio_without_provider_call(): void
     {
         Config::set('services.kalbek.ai_mode', 'fake');
@@ -236,6 +277,9 @@ class AiSpeechApiTest extends TestCase
 
     public function test_speech_check_transcribes_and_judges_audio(): void
     {
+        Config::set('ai.default_for_transcription', 'openrouter');
+        Config::set('services.kalbek.transcription_model', 'openai/whisper-1');
+
         $user = User::factory()->create();
         Sanctum::actingAs($user);
         LearnerLanguageLevel::query()->create([
@@ -337,7 +381,9 @@ class AiSpeechApiTest extends TestCase
             'speech_window_ratio' => 0.72,
         ], $attempt->metadata['audio_readiness']);
 
-        Transcription::assertGenerated(fn ($prompt): bool => $prompt->language === 'lt');
+        Transcription::assertGenerated(fn ($prompt): bool => $prompt->language === 'lt'
+            && $prompt->provider->name() === 'openrouter'
+            && $prompt->model === 'openai/whisper-1');
         SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
             ->contains('Ask for a table')
             && $prompt->contains('Judge whether the current communicative goal was answered')
@@ -909,11 +955,11 @@ class AiSpeechApiTest extends TestCase
 
     }
 
-    private function ttsCacheKey(string $text, string $languageCode = 'lt', string $voice = 'default-female'): string
+    private function ttsCacheKey(string $text, string $languageCode = 'lt', string $voice = 'default-female', string $speakingStyle = ''): string
     {
         $model = config('services.kalbek.tts_model', 'gpt-4o-mini-tts');
 
-        return hash('sha256', "{$languageCode}|{$model}|{$voice}|{$text}");
+        return hash('sha256', "{$languageCode}|{$model}|{$voice}|{$speakingStyle}|{$text}");
     }
 
     private function ttsMetadataCacheKey(string $text): string

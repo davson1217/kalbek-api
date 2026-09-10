@@ -17,6 +17,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'role',
     'image_path',
     'intro',
+    'tts_voice',
+    'speaking_style',
     'praise_lines',
     'encouragement_lines',
     'sort_order',
