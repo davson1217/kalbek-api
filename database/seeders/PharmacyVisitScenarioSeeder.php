@@ -63,7 +63,7 @@ class PharmacyVisitScenarioSeeder extends Seeder
                     '- Man skauda gerklę. = My throat hurts.',
                     '- Kiek tai kainuoja? = How much does this cost?',
                     '- Kaip vartoti šį vaistą? = How should I take this medicine?',
-                    'Health pattern: man skauda + body part is the main A1 way to say something hurts.',
+                    'Health pattern: man skauda + body part is the simplest way to say something hurts.',
                 ]),
                 'cefr_level' => 'a1',
                 'estimated_minutes' => 2,
@@ -85,7 +85,7 @@ class PharmacyVisitScenarioSeeder extends Seeder
                 '- Man skauda gerklę.',
                 '- Kiek tai kainuoja?',
                 '- Kaip vartoti šį vaistą?',
-                'Sveikatos frazė: man skauda + kūno dalis yra pagrindinis A1 būdas pasakyti, kad kažką skauda.',
+                'Sveikatos frazė: man skauda + kūno dalis yra paprasčiausias būdas pasakyti, kad kažką skauda.',
             ])],
         );
     }

@@ -3,19 +3,18 @@
 namespace Database\Factories;
 
 use App\ContentStatus;
-use App\Models\Character;
 use App\Models\Language;
-use App\Models\Scenario;
+use App\Models\Unit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Scenario>
+ * @extends Factory<Unit>
  */
-class ScenarioFactory extends Factory
+class UnitFactory extends Factory
 {
+    protected $model = Unit::class;
+
     /**
-     * Define the model's default state.
-     *
      * @return array<string, mixed>
      */
     public function definition(): array
@@ -30,17 +29,11 @@ class ScenarioFactory extends Factory
                     'support_language_name' => 'English',
                     'sort_order' => 10,
                 ])->id,
-            'unit_id' => null,
-            'character_id' => Character::factory(),
             'slug' => fake()->unique()->slug(2),
             'title' => fake()->words(2, true),
-            'subtitle' => fake()->sentence(3),
-            'description' => fake()->paragraph(),
-            'emoji' => '🎯',
-            'tone' => 'primary',
-            'start_scene_slug' => null,
+            'description' => fake()->sentence(),
+            'cefr_level' => 'a1',
             'status' => ContentStatus::Published,
-            'is_free' => false,
             'sort_order' => fake()->numberBetween(1, 50),
             'published_at' => now(),
         ];
@@ -51,13 +44,6 @@ class ScenarioFactory extends Factory
         return $this->state(fn (): array => [
             'status' => ContentStatus::Draft,
             'published_at' => null,
-        ]);
-    }
-
-    public function free(): static
-    {
-        return $this->state(fn (): array => [
-            'is_free' => true,
         ]);
     }
 }

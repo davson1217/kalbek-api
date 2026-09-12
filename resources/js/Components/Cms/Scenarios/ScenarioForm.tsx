@@ -3,14 +3,15 @@ import { Save } from 'lucide-react';
 
 import { blankOptions, SelectField, Textarea, TextField } from '../FormControls';
 import { PrimaryButton } from '../PageChrome';
-import type { CharacterOption, LanguageOption, ScenarioDetail, ScenarioSummary } from '../../../types';
+import type { CharacterOption, LanguageOption, ScenarioDetail, ScenarioSummary, UnitOption } from '../../../types';
 import { TranslationFields } from './ContentForms';
 
 type ScenarioFormRecord = ScenarioDetail | ScenarioSummary;
 
-export function ScenarioForm({ action, characters, languages, levels, method = 'post', onSuccess, scenario, statuses }: { action: string; characters: CharacterOption[]; languages: LanguageOption[]; levels: string[]; method?: 'post' | 'put'; onSuccess?: () => void; scenario?: ScenarioFormRecord; statuses: string[] }) {
+export function ScenarioForm({ action, characters, languages, levels, method = 'post', onSuccess, scenario, statuses, units }: { action: string; characters: CharacterOption[]; languages: LanguageOption[]; levels: string[]; method?: 'post' | 'put'; onSuccess?: () => void; scenario?: ScenarioFormRecord; statuses: string[]; units: UnitOption[] }) {
     const form = useForm({
         language_id: scenario?.language_id ?? languages[0]?.id ?? 0,
+        unit_id: scenario?.unit_id ?? '',
         character_id: scenario?.character_id ?? characters[0]?.id ?? 0,
         slug: scenario?.slug ?? '',
         title: scenario?.title ?? '',
@@ -25,6 +26,7 @@ export function ScenarioForm({ action, characters, languages, levels, method = '
         sort_order: scenario?.sort_order ?? 0,
         translations: scenario?.translations ?? {},
     });
+    const languageUnits = units.filter((unit) => unit.language_id === Number(form.data.language_id));
 
     return (
         <form
@@ -38,6 +40,14 @@ export function ScenarioForm({ action, characters, languages, levels, method = '
             <TextField label="Slug" placeholder="restaurant-visit" help="A short web-safe name used by the app. Use lowercase letters, numbers, and hyphens. Editors can think of it as the scenario's internal nickname." value={form.data.slug} onChange={(value) => form.setData('slug', value)} error={form.errors.slug} />
             <TextField label="Subtitle" placeholder="Order food and ask for a table" value={form.data.subtitle} onChange={(value) => form.setData('subtitle', value)} error={form.errors.subtitle} />
             <SelectField label="Language" help="The target language learners practise in this scenario. This controls API filtering, transcription, and future voice selection." value={form.data.language_id} onChange={(value) => form.setData('language_id', Number(value))} options={languages.map((language) => ({ value: language.id, label: `${language.name} (${language.code})` }))} />
+            <SelectField
+                label="Unit"
+                help="Optional curriculum group this scenario belongs to. Units make the learner journey easier to organize."
+                value={form.data.unit_id}
+                onChange={(value) => form.setData('unit_id', value === '' ? '' : Number(value))}
+                options={[{ value: '', label: 'No unit yet' }, ...languageUnits.map((unit) => ({ value: unit.id, label: `${unit.title} (${unit.slug})` }))]}
+                error={form.errors.unit_id}
+            />
             <SelectField label="Character" help="The person the learner speaks with in this scenario." value={form.data.character_id} onChange={(value) => form.setData('character_id', Number(value))} options={characters.map((character) => ({ value: character.id, label: character.name }))} />
             <SelectField label="CEFR" help="The target difficulty for this scenario. Learners are still evaluated over time; this setting only describes the content level." value={form.data.cefr_level} onChange={(value) => form.setData('cefr_level', String(value))} options={blankOptions(levels, 'Unset')} />
             <SelectField label="Status" help="Draft content is kept out of learner-facing flows. Published content can be served by the app." value={form.data.status} onChange={(value) => form.setData('status', String(value))} options={statuses.map((status) => ({ value: status, label: status }))} />

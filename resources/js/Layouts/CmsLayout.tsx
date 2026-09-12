@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { BookOpen, Globe2, LayoutDashboard, LogOut, Sparkles, UsersRound } from 'lucide-react';
+import { BookOpen, Globe2, Layers3, LayoutDashboard, LogOut, UsersRound } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 
 import type { SharedProps } from '../types';
@@ -7,6 +7,7 @@ import type { SharedProps } from '../types';
 const nav = [
     { href: '/cms', label: 'Dashboard', icon: LayoutDashboard },
     { href: '/cms/languages', label: 'Languages', icon: Globe2 },
+    { href: '/cms/units', label: 'Units', icon: Layers3 },
     { href: '/cms/scenarios', label: 'Scenarios', icon: BookOpen },
     { href: '/cms/characters', label: 'Characters', icon: UsersRound },
 ];
@@ -21,7 +22,7 @@ export function CmsLayout({ children }: PropsWithChildren) {
                 <div className="border-b border-slate-100 px-5 py-5">
                     <div className="flex items-center gap-3">
                         <span className="inline-flex size-11 items-center justify-center rounded-2xl bg-slate-950 text-white shadow-lg shadow-cyan-100">
-                            <Sparkles className="size-5" />
+                            <BookOpen className="size-5" />
                         </span>
                         <div>
                             <p className="text-xs font-bold uppercase tracking-[0.18em] text-cyan-700">Kalbek CMS</p>

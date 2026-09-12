@@ -8,16 +8,31 @@ use App\Models\NpcLine;
 use App\Models\Scenario;
 use App\Models\ScenarioNote;
 use App\Models\Scene;
+use App\Models\Unit;
 use App\Models\User;
 use Database\Seeders\CharacterSeeder;
 use Database\Seeders\RestaurantScenarioSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
 
 class CmsContentManagementTest extends TestCase
 {
     use LazilyRefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->withoutMiddleware([
+            ValidateCsrfToken::class,
+            VerifyCsrfToken::class,
+        ]);
+        $this->withSession(['_token' => 'test-token']);
+        $this->withHeader('X-CSRF-TOKEN', 'test-token');
+    }
 
     public function test_admin_can_view_scenarios_index(): void
     {
@@ -86,6 +101,77 @@ class CmsContentManagementTest extends TestCase
             'default_voice' => 'default-male',
             'sort_order' => 30,
         ]);
+    }
+
+    public function test_admin_can_manage_units_and_assign_scenarios(): void
+    {
+        $this->seed([CharacterSeeder::class, RestaurantScenarioSeeder::class]);
+        $admin = User::factory()->create(['role' => 'admin']);
+        $language = Language::query()->where('code', 'lt')->firstOrFail();
+        $scenario = Scenario::query()->where('slug', 'restoranas')->firstOrFail();
+
+        $this->actingAs($admin)->get(route('cms.units.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Units/Index')
+                ->has('units', 0));
+
+        $this->actingAs($admin)->post(route('cms.units.store'), [
+            'language_id' => $language->id,
+            'slug' => 'susipazinkime',
+            'title' => 'Susipažinkime',
+            'description' => 'A first unit for greetings and simple introductions.',
+            'cefr_level' => 'a1',
+            'status' => 'published',
+            'sort_order' => 10,
+            'translations' => [
+                'title' => ['en' => 'Let’s Get Acquainted'],
+                'description' => ['en' => 'A first unit for greetings and simple introductions.'],
+            ],
+        ])->assertRedirect();
+
+        $unit = Unit::query()->where('slug', 'susipazinkime')->firstOrFail();
+
+        $this->actingAs($admin)->put(route('cms.scenarios.update', $scenario), [
+            'language_id' => $scenario->language_id,
+            'unit_id' => $unit->id,
+            'character_id' => $scenario->character_id,
+            'slug' => $scenario->slug,
+            'title' => $scenario->title,
+            'subtitle' => $scenario->subtitle,
+            'description' => $scenario->description,
+            'emoji' => $scenario->emoji,
+            'tone' => $scenario->tone,
+            'cefr_level' => $scenario->cefr_level?->value,
+            'start_scene_slug' => $scenario->start_scene_slug,
+            'status' => $scenario->status->value,
+            'is_free' => $scenario->is_free,
+            'sort_order' => $scenario->sort_order,
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('units', [
+            'slug' => 'susipazinkime',
+            'title' => 'Susipažinkime',
+            'status' => 'published',
+        ]);
+        $this->assertDatabaseHas('scenarios', [
+            'slug' => 'restoranas',
+            'unit_id' => $unit->id,
+        ]);
+        $this->assertDatabaseHas('content_translations', [
+            'translatable_type' => Unit::class,
+            'translatable_id' => $unit->id,
+            'field' => 'title',
+            'locale' => 'en',
+            'value' => 'Let’s Get Acquainted',
+        ]);
+
+        $this->actingAs($admin)->get(route('cms.scenarios.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('Scenarios/Index')
+                ->has('units', 1)
+                ->where('scenarios.0.unit.title', 'Susipažinkime'));
     }
 
     public function test_admin_can_create_scene_goal_and_npc_line(): void

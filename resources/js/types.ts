@@ -39,6 +39,25 @@ export interface LanguageRecord extends LanguageOption {
     updated_at: string | null;
 }
 
+export interface UnitOption {
+    id: number;
+    language_id: number;
+    slug: string;
+    title: string;
+    cefr_level: string | null;
+    status: string;
+    sort_order: number;
+    language_code?: string | null;
+}
+
+export interface UnitRecord extends UnitOption {
+    description: string | null;
+    published_at: string | null;
+    scenarios_count: number;
+    language: LanguageOption | null;
+    translations: TranslationMap;
+}
+
 export interface CharacterRecord extends CharacterOption {
     language: LanguageOption | null;
     role: string;
@@ -68,6 +87,8 @@ export interface ScenarioSummary {
     sort_order: number;
     language_id: number;
     language: LanguageOption | null;
+    unit_id: number | null;
+    unit: UnitOption | null;
     character_id: number;
     character: string | null;
     scenes_count: number | null;

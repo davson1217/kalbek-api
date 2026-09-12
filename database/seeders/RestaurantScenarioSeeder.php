@@ -63,7 +63,7 @@ class RestaurantScenarioSeeder extends Seeder
                     '- Norėčiau sriubos, prašau. = I would like soup, please.',
                     '- Vandens, prašau. = Water, please.',
                     '- Mokėsiu kortele. = I will pay by card.',
-                    'Politeness tip: norėčiau and prašau are the safest A1 restaurant forms.',
+                    'Politeness tip: norėčiau and prašau are safe restaurant forms for this stage.',
                 ]),
                 'cefr_level' => 'a1',
                 'estimated_minutes' => 2,
@@ -85,7 +85,7 @@ class RestaurantScenarioSeeder extends Seeder
                 '- Norėčiau sriubos, prašau.',
                 '- Vandens, prašau.',
                 '- Mokėsiu kortele.',
-                'Mandagumo patarimas: norėčiau ir prašau yra saugios A1 lygio restorano frazės.',
+                'Mandagumo patarimas: norėčiau ir prašau yra saugios restorano frazės šiame etape.',
             ])],
         );
     }

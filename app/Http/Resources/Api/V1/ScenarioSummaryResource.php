@@ -31,6 +31,13 @@ class ScenarioSummaryResource extends JsonResource
                     'name' => $this->language->support_language_name,
                 ],
             ]),
+            'unit' => $this->whenLoaded('unit', fn () => $this->unit ? [
+                'id' => $this->unit->slug,
+                'title' => $this->unit->translated('title', $locale, $this->unit->title),
+                'description' => $this->unit->translated('description', $locale, $this->unit->description),
+                'cefr_level' => $this->unit->cefr_level?->value,
+                'sort_order' => $this->unit->sort_order,
+            ] : null),
             'character' => $this->whenLoaded('character', fn () => [
                 'id' => $this->character->slug,
                 'name' => $this->character->name,

@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\ProfileController;
 use App\Http\Controllers\Api\V1\ScenarioController;
 use App\Http\Controllers\Api\V1\SpeechCheckController;
 use App\Http\Controllers\Api\V1\TextToSpeechController;
+use App\Http\Controllers\Api\V1\UnitController;
 use App\Modules\Subscriptions\Http\Controllers\BillingPortalController;
 use App\Modules\Subscriptions\Http\Controllers\StripeWebhookController;
 use App\Modules\Subscriptions\Http\Controllers\SubscriptionCheckoutController;
@@ -42,6 +43,8 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
         ->only(['index', 'show']);
     Route::get('/languages', [LanguageController::class, 'index'])
         ->name('languages.index');
+    Route::get('/units', [UnitController::class, 'index'])
+        ->name('units.index');
     Route::get('/tts', TextToSpeechController::class)
         ->name('tts');
     Route::post('/stripe/webhook', StripeWebhookController::class)

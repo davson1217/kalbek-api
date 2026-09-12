@@ -38,6 +38,24 @@ Important columns:
 - `intro`, `praise_lines`, `encouragement_lines`: supporting UX copy.
 - `status`, `sort_order`: CMS availability and ordering.
 
+### Unit
+
+A unit is a curriculum block that groups several related scenarios into an intentional learning progression. For example, the unit “Susipažinkime” can contain separate short scenarios for greetings, names, yes/no identity questions, origin, and simple roles.
+
+Database: `units`
+
+Important columns:
+
+- `language_id`: target language for the unit.
+- `slug`: stable identifier used by CMS/API code.
+- `title`: learner-facing unit name.
+- `description`: short explanation of what the unit teaches.
+- `cefr_level`: intended difficulty band for the unit.
+- `status`: draft, published, or archived.
+- `sort_order`, `published_at`: curriculum ordering and release metadata.
+
+Business rule: units should be broad enough to hold several short scenarios, but narrow enough that learners understand the learning theme. A unit should describe a progression, not just a category.
+
 ### Scenario
 
 A scenario is the complete lesson container, for example “At the restaurant” or “At the shop.” It owns scenes and determines the first scene.
@@ -47,6 +65,7 @@ Database: `scenarios`
 Important columns:
 
 - `language_id`: target language for the scenario.
+- `unit_id`: optional curriculum unit that groups this scenario with related scenarios.
 - `character_id`: character used in the scenario.
 - `slug`: public stable identifier used by API routes and frontend URLs.
 - `title`, `subtitle`, `description`, `emoji`, `tone`: learner-facing presentation.
@@ -151,16 +170,18 @@ Important columns:
 
 ## Runtime Flow
 
-1. The frontend loads a scenario by `scenarios.slug` from the API.
-2. If the scenario has a published `scenario_notes` row, the frontend shows the preparation note first.
-3. The learner taps “Start speaking.”
-4. The frontend enters `scenarios.start_scene_slug`.
-5. The scene selects an opening `npc_lines` record where `trigger_goal_id` is `null`.
-6. The learner chooses one `goals` option and records speech.
-7. The API transcribes the audio and asks the SpeakingJudge whether the transcript satisfies `goals.intent` at the relevant CEFR level.
-8. If the response can continue, the authored flow advances by `goals.next_scene_id`.
-9. The character reply is selected from `npc_lines` where `trigger_goal_id` matches the completed goal.
-10. If there is no next scene, the conversation prepares to finish after the final reply.
+1. The frontend can load published units from `/api/v1/units` or load published scenarios from `/api/v1/scenarios`.
+2. Scenario summaries include optional `unit` metadata so the frontend can group scenarios into a curriculum journey.
+3. The frontend loads a scenario by `scenarios.slug` from the API.
+4. If the scenario has a published `scenario_notes` row, the frontend can show the preparation note before practice.
+5. The learner taps “Start speaking.”
+6. The frontend enters `scenarios.start_scene_slug`.
+7. The scene selects an opening `npc_lines` record where `trigger_goal_id` is `null`.
+8. The learner chooses one `goals` option and records speech.
+9. The API transcribes the audio and asks the SpeakingJudge whether the transcript satisfies `goals.intent` at the relevant CEFR level.
+10. If the response can continue, the authored flow advances by `goals.next_scene_id`.
+11. The character reply is selected from `npc_lines` where `trigger_goal_id` matches the completed goal.
+12. If there is no next scene, the conversation prepares to finish after the final reply.
 
 Important: AI does not choose the next scene. Authored CMS relationships control progression.
 
@@ -210,6 +231,7 @@ In the CMS, open a scenario and use the Flow QA panel. Critical issues should bl
 ## Authoring Guidelines
 
 - Write goals as communicative intentions, not exact string matches.
+- Group scenarios into units when they are part of the same learning progression.
 - Keep A1 goals short, practical, and concrete.
 - Provide multiple NPC reply variants when the same intent can be answered naturally in several ways.
 - Keep replies tied to the current goal. Do not use generic replies when a goal-specific reply is needed.

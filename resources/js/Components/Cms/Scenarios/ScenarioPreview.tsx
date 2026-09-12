@@ -1,4 +1,4 @@
-import { MessageCircle, PlayCircle, Route, Sparkles } from 'lucide-react';
+import { MessageCircle, PlayCircle, Route } from 'lucide-react';
 
 import type { GoalRecord, NpcLineRecord, ScenarioDetail, SceneRecord } from '../../../types';
 import { StatusBadge } from '../PageChrome';
@@ -85,7 +85,7 @@ function PreviewGoal({ goal }: { goal: GoalRecord }) {
             </div>
             <p className="mt-3 rounded-2xl bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-950">Learner may say: {goal.example}</p>
             <div className="mt-3 space-y-2 border-t border-dashed border-slate-200 pt-3">
-                <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500"><Sparkles className="size-3.5 text-violet-600" /> Possible character replies</p>
+                <p className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.16em] text-slate-500"><MessageCircle className="size-3.5 text-cyan-700" /> Possible character replies</p>
                 {goal.response_lines.length === 0 ? <PreviewEmpty>No replies attached to this goal.</PreviewEmpty> : goal.response_lines.map((line) => <PreviewLine key={line.id} line={line} />)}
             </div>
         </div>

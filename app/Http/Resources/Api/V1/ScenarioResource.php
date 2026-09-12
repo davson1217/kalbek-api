@@ -31,6 +31,13 @@ class ScenarioResource extends JsonResource
                     'name' => $this->language->support_language_name,
                 ],
             ]),
+            'unit' => $this->whenLoaded('unit', fn () => $this->unit ? [
+                'id' => $this->unit->slug,
+                'title' => $this->unit->translated('title', $locale, $this->unit->title),
+                'description' => $this->unit->translated('description', $locale, $this->unit->description),
+                'cefr_level' => $this->unit->cefr_level?->value,
+                'sort_order' => $this->unit->sort_order,
+            ] : null),
             'character' => $this->whenLoaded('character', fn () => [
                 'id' => $this->character->slug,
                 'name' => $this->character->name,
@@ -58,26 +65,26 @@ class ScenarioResource extends JsonResource
                     'estimated_minutes' => $this->note->estimated_minutes,
                 ];
             }),
-            'scenes' => $this->whenLoaded('scenes', fn () => $this->scenes->map(fn ($scene): array => [
+            'scenes' => $this->whenLoaded('scenes', fn () => $this->scenes->sortBy('sort_order')->map(fn ($scene): array => [
                 'id' => $scene->slug,
                 'title' => $scene->translated('title', $locale, $scene->title ?? $scene->slug),
                 'setting' => $scene->translated('setting', $locale, $scene->setting),
                 'cefr_level' => $scene->cefr_level?->value,
-                'lines' => $scene->npcLines->map(fn ($line): array => [
+                'lines' => $scene->npcLines->sortBy('sort_order')->map(fn ($line): array => [
                     'target_text' => $line->target_text,
                     'support_translation' => $line->translated('support_translation', $locale, $line->support_translation),
                     'cefr_level' => $line->cefr_level?->value,
                     'trigger_goal_id' => $line->triggerGoal?->slug,
                     'priority' => $line->priority,
                 ])->values(),
-                'props' => $scene->props->map(fn ($prop): array => [
+                'props' => $scene->props->sortBy('sort_order')->map(fn ($prop): array => [
                     'type' => $prop->type,
                     'target_text' => $prop->target_text,
                     'support_translation' => $prop->translated('support_translation', $locale, $prop->support_translation),
                     'price' => $prop->price,
                     'metadata' => $prop->metadata,
                 ])->values(),
-                'goals' => $scene->goals->map(fn ($goal): array => [
+                'goals' => $scene->goals->sortBy('sort_order')->map(fn ($goal): array => [
                     'id' => $goal->slug,
                     'label' => $goal->translated('label', $locale, $goal->label),
                     'intent' => $goal->translated('intent', $locale, $goal->intent),

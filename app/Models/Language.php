@@ -33,6 +33,11 @@ class Language extends Model
         return $this->hasMany(Scenario::class);
     }
 
+    public function units(): HasMany
+    {
+        return $this->hasMany(Unit::class);
+    }
+
     public function getRouteKeyName(): string
     {
         return 'code';

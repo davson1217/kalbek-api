@@ -11,6 +11,7 @@ use App\Http\Controllers\Cms\ScenarioController;
 use App\Http\Controllers\Cms\ScenarioNoteController;
 use App\Http\Controllers\Cms\SceneController;
 use App\Http\Controllers\Cms\ScenePropController;
+use App\Http\Controllers\Cms\UnitController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -29,6 +30,7 @@ Route::prefix('cms')->name('cms.')->group(function (): void {
         Route::post('/logout', [AuthSessionController::class, 'destroy'])->name('logout');
         Route::get('/', DashboardController::class)->name('dashboard');
         Route::resource('languages', LanguageController::class)->only(['index', 'store', 'update']);
+        Route::resource('units', UnitController::class)->only(['index', 'store', 'update']);
         Route::resource('characters', CharacterController::class)->only(['index', 'store', 'update']);
         Route::resource('scenarios', ScenarioController::class)->only(['index', 'store', 'show', 'update']);
         Route::post('scenarios/{scenario}/note', [ScenarioNoteController::class, 'store'])->name('scenarios.note.store');

@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { Edit3, Plus, Save, Search, Sparkles, UserRound } from 'lucide-react';
+import { Edit3, Plus, Save, Search, UserRound } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { SelectField, Textarea, TextField } from '../../Components/Cms/FormControls';
@@ -66,7 +66,7 @@ export default function CharactersIndex({ characters, statuses, languages, ttsVo
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <div className="flex items-start gap-3">
                             <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-800">
-                                <Sparkles className="size-5" />
+                                <UserRound className="size-5" />
                             </span>
                             <div>
                                 <h2 className="text-lg font-black tracking-tight text-slate-950">Available characters</h2>

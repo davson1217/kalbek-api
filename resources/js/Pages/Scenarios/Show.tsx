@@ -9,18 +9,19 @@ import { ScenarioForm } from '../../Components/Cms/Scenarios/ScenarioForm';
 import { ScenarioPreview } from '../../Components/Cms/Scenarios/ScenarioPreview';
 import { ScenePanel } from '../../Components/Cms/Scenarios/ScenePanel';
 import { CmsLayout } from '../../Layouts/CmsLayout';
-import type { CharacterOption, LanguageOption, ScenarioAuditIssue, ScenarioDetail } from '../../types';
+import type { CharacterOption, LanguageOption, ScenarioAuditIssue, ScenarioDetail, UnitOption } from '../../types';
 
 interface Props {
     scenario: ScenarioDetail;
     auditIssues: ScenarioAuditIssue[];
     characters: CharacterOption[];
     languages: LanguageOption[];
+    units: UnitOption[];
     statuses: string[];
     levels: string[];
 }
 
-export default function ScenarioShow({ scenario, auditIssues, characters, languages, statuses, levels }: Props) {
+export default function ScenarioShow({ scenario, auditIssues, characters, languages, statuses, levels, units }: Props) {
     const [editingScenario, setEditingScenario] = useState(false);
     const [creatingScene, setCreatingScene] = useState(false);
     const [editingNote, setEditingNote] = useState(false);
@@ -50,6 +51,7 @@ export default function ScenarioShow({ scenario, auditIssues, characters, langua
                         <StatusBadge tone="cyan">{scenario.cefr_level?.toUpperCase() ?? 'UNSET'}</StatusBadge>
                         <StatusBadge tone="emerald">{scenario.status}</StatusBadge>
                         <StatusBadge tone={scenario.is_free ? 'emerald' : 'slate'}>{scenario.is_free ? 'Free scenario' : 'Paid scenario'}</StatusBadge>
+                        <StatusBadge tone="violet">{scenario.unit ? scenario.unit.title : 'No unit'}</StatusBadge>
                         <StatusBadge>{scenario.language ? `${scenario.language.name} (${scenario.language.code})` : 'No language'}</StatusBadge>
                         <StatusBadge>{scenario.character ?? 'No character'}</StatusBadge>
                         <StatusBadge>{scenario.scenes.length} scenes</StatusBadge>
@@ -95,7 +97,7 @@ export default function ScenarioShow({ scenario, auditIssues, characters, langua
             </div>
 
             <Modal open={editingScenario} title="Edit scenario" onClose={() => setEditingScenario(false)}>
-                <ScenarioForm action={`/cms/scenarios/${scenario.slug}`} method="put" scenario={scenario} characters={characters} languages={languages} statuses={statuses} levels={levels} onSuccess={() => setEditingScenario(false)} />
+                <ScenarioForm action={`/cms/scenarios/${scenario.slug}`} method="put" scenario={scenario} characters={characters} languages={languages} units={units} statuses={statuses} levels={levels} onSuccess={() => setEditingScenario(false)} />
             </Modal>
 
             <Modal open={creatingScene} title="Create scene" description="Scenes are the steps in a speaking scenario." onClose={() => setCreatingScene(false)}>

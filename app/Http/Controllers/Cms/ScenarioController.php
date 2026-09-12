@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Character;
 use App\Models\Language;
 use App\Models\Scenario;
+use App\Models\Unit;
 use App\Services\Content\AuditScenarioContent;
 use App\Services\Content\SyncContentTranslations;
 use Illuminate\Http\RedirectResponse;
@@ -22,7 +23,7 @@ class ScenarioController extends Controller
     {
         return Inertia::render('Scenarios/Index', [
             'scenarios' => Scenario::query()
-                ->with(['character', 'language', 'translations'])
+                ->with(['character', 'language', 'unit', 'translations'])
                 ->withCount('scenes')
                 ->orderBy('sort_order')
                 ->orderBy('title')
@@ -30,6 +31,7 @@ class ScenarioController extends Controller
                 ->map(fn (Scenario $scenario): array => $this->summary($scenario)),
             'characters' => $this->characterOptions(),
             'languages' => $this->languageOptions(),
+            'units' => $this->unitOptions(),
             'statuses' => array_column(ContentStatus::cases(), 'value'),
             'levels' => array_column(CefrLevel::cases(), 'value'),
         ]);
@@ -49,6 +51,7 @@ class ScenarioController extends Controller
         $scenario->load([
             'character',
             'language',
+            'unit',
             'translations',
             'note.translations',
             'scenes.translations',
@@ -66,6 +69,7 @@ class ScenarioController extends Controller
             'auditIssues' => $auditor->issues($scenario, publishedOnly: false),
             'characters' => $this->characterOptions(),
             'languages' => $this->languageOptions(),
+            'units' => $this->unitOptions(),
             'statuses' => array_column(ContentStatus::cases(), 'value'),
             'levels' => array_column(CefrLevel::cases(), 'value'),
         ]);
@@ -84,6 +88,11 @@ class ScenarioController extends Controller
     {
         return $request->validate([
             'language_id' => ['required', 'integer', 'exists:languages,id'],
+            'unit_id' => [
+                'nullable',
+                'integer',
+                Rule::exists('units', 'id')->where(fn ($query) => $query->where('language_id', $request->integer('language_id'))),
+            ],
             'character_id' => ['required', 'integer', 'exists:characters,id'],
             'slug' => ['required', 'string', 'max:100', Rule::unique('scenarios', 'slug')->ignore($scenario)],
             'title' => ['required', 'string', 'max:160'],
@@ -123,6 +132,16 @@ class ScenarioController extends Controller
             'is_free' => (bool) $scenario->is_free,
             'sort_order' => $scenario->sort_order,
             'language_id' => $scenario->language_id,
+            'unit_id' => $scenario->unit_id,
+            'unit' => $scenario->unit ? [
+                'id' => $scenario->unit->id,
+                'language_id' => $scenario->unit->language_id,
+                'slug' => $scenario->unit->slug,
+                'title' => $scenario->unit->title,
+                'cefr_level' => $scenario->unit->cefr_level?->value,
+                'status' => $scenario->unit->status->value,
+                'sort_order' => $scenario->unit->sort_order,
+            ] : null,
             'language' => $scenario->language ? [
                 'id' => $scenario->language->id,
                 'code' => $scenario->language->code,
@@ -235,6 +254,25 @@ class ScenarioController extends Controller
                 'native_name' => $language->native_name,
                 'support_language_code' => $language->support_language_code,
                 'support_language_name' => $language->support_language_name,
+            ])
+            ->all();
+    }
+
+    private function unitOptions(): array
+    {
+        return Unit::query()
+            ->with('language')
+            ->orderBy('sort_order')
+            ->orderBy('title')
+            ->get(['id', 'language_id', 'slug', 'title', 'cefr_level', 'status'])
+            ->map(fn (Unit $unit): array => [
+                'id' => $unit->id,
+                'language_id' => $unit->language_id,
+                'slug' => $unit->slug,
+                'title' => $unit->title,
+                'cefr_level' => $unit->cefr_level?->value,
+                'status' => $unit->status->value,
+                'language_code' => $unit->language?->code,
             ])
             ->all();
     }

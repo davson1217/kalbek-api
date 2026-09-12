@@ -10,6 +10,7 @@ import Dashboard from './Pages/Dashboard';
 import LanguagesIndex from './Pages/Languages/Index';
 import ScenariosIndex from './Pages/Scenarios/Index';
 import ScenariosShow from './Pages/Scenarios/Show';
+import UnitsIndex from './Pages/Units/Index';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Kalbek API';
 const pages: Record<string, ComponentType<any>> = {
@@ -19,6 +20,7 @@ const pages: Record<string, ComponentType<any>> = {
     'Languages/Index': LanguagesIndex,
     'Scenarios/Index': ScenariosIndex,
     'Scenarios/Show': ScenariosShow,
+    'Units/Index': UnitsIndex,
 };
 
 createInertiaApp({

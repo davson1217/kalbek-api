@@ -16,7 +16,7 @@ class ScenarioPayloadBuilder
         return Scenario::query()
             ->published()
             ->when($languageCode, fn ($query) => $query->whereHas('language', fn ($language) => $language->where('code', $languageCode)))
-            ->with(['character', 'language', 'translations'])
+            ->with(['character', 'language', 'unit.translations', 'translations'])
             ->orderBy('sort_order')
             ->orderBy('title')
             ->get();
@@ -29,6 +29,7 @@ class ScenarioPayloadBuilder
         return $scenario->loadMissing([
             'character',
             'language',
+            'unit.translations',
             'translations',
             'note.translations',
             'scenes.translations',
