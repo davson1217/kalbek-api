@@ -142,6 +142,7 @@ export interface GoalRecord {
     label: string;
     intent: string;
     example: string;
+    accepted_phrases: string[];
     cefr_level: string | null;
     next_scene_id: number | null;
     next_scene_slug: string | null;

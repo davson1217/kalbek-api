@@ -194,6 +194,7 @@ class ScenarioController extends Controller
                     'label' => $goal->label,
                     'intent' => $goal->intent,
                     'example' => $goal->example,
+                    'accepted_phrases' => $goal->accepted_phrases ?? [],
                     'cefr_level' => $goal->cefr_level?->value,
                     'next_scene_id' => $goal->next_scene_id,
                     'next_scene_slug' => $goal->nextScene?->slug,

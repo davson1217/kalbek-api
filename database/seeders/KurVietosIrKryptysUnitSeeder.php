@@ -64,9 +64,9 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
 
                 $this->syncTranslations($scenario, $scenarioData['translations']);
                 $this->upsertNote($scenario, $scenarioData['note']);
+                $this->deleteRemovedScenes($scenario, $scenarioData['scenes']);
                 $scenes = $this->upsertScenes($scenario, $scenarioData['scenes']);
                 $this->replaceSceneContent($scenes, $scenarioData['scenes']);
-                $this->deleteRemovedScenes($scenario, $scenarioData['scenes']);
             }
         });
     }
@@ -318,7 +318,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Aš esu Vilniuje. = I am in Vilnius.',
                     '- Aš esu namie. = I am at home.',
                     'Tiny grammar: many place words change when you mean “in/at”: kavinė → kavinėje, parduotuvė → parduotuvėje, mokykla → mokykloje. Learn them first as ready-made speaking chunks.',
-                    "Model answer: {$example}",
                 ]),
                 implode("\n\n", [
                     'Ši pamoka padeda pasakyti, kur esate.',
@@ -329,7 +328,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Aš esu Vilniuje.',
                     '- Aš esu namie.',
                     'Maža gramatikos pastaba: vietos žodžiai dažnai keičiasi, kai reiškia „in/at“: kavinė → kavinėje, parduotuvė → parduotuvėje, mokykla → mokykloje. Pirmiausia mokykitės juos kaip paruoštas kalbėjimo frazes.',
-                    "Pavyzdys: {$example}",
                 ]),
             ],
             'kur-yra-tualetas' => [
@@ -342,7 +340,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Kur yra išėjimas? = Where is the exit?',
                     '- Ačiū. = Thank you.',
                     'Tiny grammar: in this question, the place you are looking for usually stays simple: tualetas, kasa, išėjimas. Do not worry about endings yet.',
-                    "Model answer: {$example}",
                 ]),
                 implode("\n\n", [
                     'Ši pamoka praktikuoja vieną labai naudingą klausimą: Kur yra ...?',
@@ -353,7 +350,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Kur yra išėjimas?',
                     '- Ačiū.',
                     'Maža gramatikos pastaba: šiame klausime ieškomas daiktas ar vieta dažniausiai lieka paprasta forma: tualetas, kasa, išėjimas. Dėl galūnių kol kas nesijaudinkite.',
-                    "Pavyzdys: {$example}",
                 ]),
             ],
             'cia-ar-ten' => [
@@ -366,7 +362,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Dešinėje. = On the right.',
                     '- Taip, ten. = Yes, there.',
                     'Tiny grammar: kairėje and dešinėje already include the idea “on the left/right.” Use them as complete short answers.',
-                    "Model answer: {$example}",
                 ]),
                 implode("\n\n", [
                     'Ši pamoka yra apie labai trumpus atsakymus apie vietą.',
@@ -377,7 +372,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Dešinėje.',
                     '- Taip, ten.',
                     'Maža gramatikos pastaba: kairėje ir dešinėje jau reiškia „on the left/right“. Galite juos vartoti kaip trumpus pilnus atsakymus.',
-                    "Pavyzdys: {$example}",
                 ]),
             ],
             'mieste-kur-yra' => [
@@ -389,7 +383,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Kur yra kavinė? = Where is the cafe?',
                     '- Mieste. = In town.',
                     'Tiny grammar: miestas means town/city. Mieste means in town/in the city. Treat mieste as one useful place word for now.',
-                    "Model answer: {$example}",
                 ]),
                 implode("\n\n", [
                     'Ši pamoka perkelia tą patį klausimą į miestą.',
@@ -399,7 +392,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Kur yra kavinė?',
                     '- Mieste.',
                     'Maža gramatikos pastaba: miestas yra „town/city“. Mieste reiškia „in town/in the city“. Kol kas mokykitės mieste kaip vieną naudingą vietos žodį.',
-                    "Pavyzdys: {$example}",
                 ]),
             ],
             'suprantu-krypti' => [
@@ -412,7 +404,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Gerai, ačiū. = Okay, thank you.',
                     '- Supratau. = I understood.',
                     'Tiny grammar: eikite and pasukite are polite instruction forms. At this stage, just recognize them.',
-                    "Model answer: {$example}",
                 ]),
                 implode("\n\n", [
                     'Ši pamoka daugiausia apie klausymą ir reakciją. Jums dar nereikia pačiam aiškinti kelio.',
@@ -423,7 +414,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Gerai, ačiū.',
                     '- Supratau.',
                     'Maža gramatikos pastaba: eikite ir pasukite yra mandagios nurodymų formos. Šiame etape svarbiausia jas atpažinti.',
-                    "Pavyzdys: {$example}",
                 ]),
             ],
             default => [
@@ -435,7 +425,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Ten, kairėje. = There, on the left.',
                     '- Gerai, ačiū. = Okay, thank you.',
                     'Tiny grammar: keep the full phrase simple. Your goal is to ask clearly and respond politely.',
-                    "Model answer: {$example}",
                 ]),
                 implode("\n\n", [
                     'Šis pakartojimo scenarijus sujungia skyriaus vietos frazes.',
@@ -445,7 +434,6 @@ class KurVietosIrKryptysUnitSeeder extends Seeder
                     '- Ten, kairėje.',
                     '- Gerai, ačiū.',
                     'Maža gramatikos pastaba: laikykite visą frazę paprastą. Tikslas - aiškiai paklausti ir mandagiai sureaguoti.',
-                    "Pavyzdys: {$example}",
                 ]),
             ],
         };

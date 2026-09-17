@@ -16,6 +16,7 @@ use App\Models\User;
 use Database\Seeders\A1ScenarioSeeder;
 use Database\Seeders\CharacterSeeder;
 use Database\Seeders\RestaurantScenarioSeeder;
+use Database\Seeders\SusipazinkimeUnitSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
@@ -338,8 +339,8 @@ class AiSpeechApiTest extends TestCase
             ->assertJsonPath('should_retry', false)
             ->assertJsonPath('feedback', 'That works well.')
             ->assertJsonPath('corrected', 'Norėčiau staliuko dviem.')
-            ->assertJsonPath('suggested_response', 'Norėčiau staliuko dviem, prašau.')
-            ->assertJsonPath('suggestion', 'Norėčiau staliuko dviem, prašau.')
+            ->assertJsonPath('suggested_response', '')
+            ->assertJsonPath('suggestion', '')
             ->assertJsonPath('communication.intent_match', 'full')
             ->assertJsonPath('communication.understood_meaning', true)
             ->assertJsonPath('communication.went_off_script', true)
@@ -365,7 +366,7 @@ class AiSpeechApiTest extends TestCase
             'metadata->should_retry' => false,
             'metadata->normalized_transcript' => 'Norėčiau staliuko dviem.',
             'metadata->normalization_confidence' => 'high',
-            'metadata->suggested_response' => 'Norėčiau staliuko dviem, prašau.',
+            'metadata->suggested_response' => '',
             'metadata->content_cefr_level' => 'a1',
             'metadata->learner_cefr_level' => 'a2',
         ]);
@@ -385,7 +386,7 @@ class AiSpeechApiTest extends TestCase
             && $prompt->provider->name() === 'openrouter'
             && $prompt->model === 'openai/whisper-1');
         SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
-            ->contains('Ask for a table')
+            ->contains('The learner asks for a table for two people.')
             && $prompt->contains('Judge whether the current communicative goal was answered')
             && $prompt->contains('Content CEFR level: a1')
             && $prompt->contains('Current estimated learner CEFR level: a2')
@@ -453,8 +454,8 @@ class AiSpeechApiTest extends TestCase
             ->assertJsonPath('can_continue', true)
             ->assertJsonPath('should_retry', false)
             ->assertJsonPath('corrected', 'Ar turite maisto?')
-            ->assertJsonPath('suggested_response', 'Ar turite maisto?')
-            ->assertJsonPath('suggestion', 'Ar turite maisto?')
+            ->assertJsonPath('suggested_response', '')
+            ->assertJsonPath('suggestion', '')
             ->assertJsonPath('communication.intent_match', 'full')
             ->assertJsonPath('communication.note', 'The spoken answer satisfies the current goal.')
             ->assertJsonPath('communication.improvement_focus', 'none')
@@ -515,6 +516,186 @@ class AiSpeechApiTest extends TestCase
             'transcript' => 'Kavos, prašau.',
             'metadata->strict_speech_mode' => true,
         ]);
+    }
+
+    public function test_strict_mode_requires_authored_goal_phrase_when_goal_has_accepted_phrases(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['strict_speech_mode' => true]));
+        Transcription::fake(['Labas.']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'should_retry' => false,
+            'retry_reason' => '',
+            'feedback' => 'That greeting is understandable.',
+            'normalized_transcript' => 'Labas.',
+            'normalization_confidence' => 'high',
+            'normalization_note' => '',
+            'suggested_response' => '',
+            'corrected' => 'Labas.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'The greeting was understood.',
+            'improvement_focus' => 'none',
+            'scores' => [
+                'grammar' => 80,
+                'vocabulary' => 80,
+                'cohesion' => 80,
+                'task_completion' => 80,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, SusipazinkimeUnitSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'pasisveikinimas',
+            'scene_id' => 'rytas',
+            'goal_id' => 'say-good-morning',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner greets Gabija in the morning.',
+            'example' => 'Labas rytas.',
+            'context' => 'Morning greeting.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('pass', true)
+            ->assertJsonPath('can_continue', false)
+            ->assertJsonPath('should_retry', true)
+            ->assertJsonPath('retry_reason', 'In strict mode, try using the target phrase for this goal.');
+    }
+
+    public function test_goal_aware_interpretation_accepts_authored_goodbye_variant(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Iki']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'should_retry' => false,
+            'retry_reason' => '',
+            'feedback' => 'That is a natural goodbye.',
+            'corrected' => 'Iki.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'You said goodbye clearly.',
+            'improvement_focus' => 'none',
+            'scores' => [
+                'grammar' => 90,
+                'vocabulary' => 90,
+                'cohesion' => 88,
+                'task_completion' => 95,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, SusipazinkimeUnitSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'pasisveikinimas',
+            'scene_id' => 'atsisveikinimas',
+            'goal_id' => 'say-goodbye',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner says goodbye.',
+            'example' => 'Viso gero.',
+            'context' => 'Saying goodbye.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('normalized_transcript', 'Iki.')
+            ->assertJsonPath('interpretation.source', 'accepted_phrase')
+            ->assertJsonPath('can_continue', true);
+    }
+
+    public function test_goal_aware_interpretation_recovers_close_stt_miss_for_name_question(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Quo tu vardu?']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'should_retry' => false,
+            'retry_reason' => '',
+            'feedback' => 'That question works.',
+            'corrected' => 'Kuo tu vardu?',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'You asked the name clearly.',
+            'improvement_focus' => 'none',
+            'scores' => [
+                'grammar' => 90,
+                'vocabulary' => 90,
+                'cohesion' => 88,
+                'task_completion' => 95,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, SusipazinkimeUnitSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'mano-vardas',
+            'scene_id' => 'klauskite-vardo',
+            'goal_id' => 'ask-name',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner asks another person’s name.',
+            'example' => 'Koks jūsų vardas?',
+            'context' => 'Asking a name.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('transcript', 'Quo tu vardu?')
+            ->assertJsonPath('normalized_transcript', 'Kuo tu vardu?')
+            ->assertJsonPath('interpretation.source', 'accepted_phrase');
+
+        SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
+            ->contains('Interpreted transcript for judging: "Kuo tu vardu?"')
+            && $prompt->contains('Accepted phrases for this exact goal: Koks jūsų vardas? | Kuo jūs vardu? | Kuo tu vardu?'));
+    }
+
+    public function test_feedback_does_not_criticize_raw_stt_artifact_after_interpretation(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Ne, aš nasu studentas.']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'should_retry' => false,
+            'retry_reason' => '',
+            'feedback' => "The verb form 'nasu' appears to be a mispronunciation of 'nesu'.",
+            'corrected' => 'Ne, aš nesu studentas.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'You denied the statement clearly.',
+            'improvement_focus' => 'none',
+            'scores' => [
+                'grammar' => 88,
+                'vocabulary' => 88,
+                'cohesion' => 86,
+                'task_completion' => 94,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, SusipazinkimeUnitSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'ar-jus-esate',
+            'scene_id' => 'neiginys',
+            'goal_id' => 'answer-no',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner denies being a student with ne or nesu.',
+            'example' => 'Ne, aš nesu studentas.',
+            'context' => 'Answering no.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('normalized_transcript', 'Ne, aš nesu studentas.')
+            ->assertJsonPath('feedback', 'That answer was understandable.');
     }
 
     public function test_speech_check_judges_against_higher_content_cefr_when_available(): void
@@ -626,13 +807,107 @@ class AiSpeechApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('transcript', 'Labadiena, mano vardas devydas.')
             ->assertJsonPath('normalized_transcript', 'Laba diena, mano vardas devydas.')
-            ->assertJsonPath('feedback', 'That was understandable. A more natural spoken version is: Laba diena, mano vardas Deivydas.')
+            ->assertJsonPath('feedback', 'That was understandable. A more natural spoken version is: Aš esu Jonas.')
             ->assertJsonPath('communication.note', 'That was understandable. Try saying the phrase a little more clearly and naturally.');
 
         SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
             ->contains('Raw speech transcript: "Labadiena, mano vardas devydas."')
-            && $prompt->contains('Normalized transcript for judging: "Laba diena, mano vardas devydas."')
+            && $prompt->contains('Interpreted transcript for judging: "Laba diena, mano vardas devydas."')
             && $prompt->contains('Judge the spoken answer, not the transcript formatting.'));
+    }
+
+    public function test_speech_check_removes_internal_judge_terms_from_feedback(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Universitete.']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'should_retry' => false,
+            'retry_reason' => '',
+            'feedback' => "Great job! 'Universitete' isn't in the model list but it is correct.",
+            'normalized_transcript' => 'Universitete.',
+            'normalization_confidence' => 'high',
+            'normalization_note' => '',
+            'suggested_response' => '',
+            'corrected' => 'Universitete.',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'The answer worked even though it was outside the expected answer.',
+            'improvement_focus' => 'none',
+            'scores' => [
+                'grammar' => 90,
+                'vocabulary' => 90,
+                'cohesion' => 88,
+                'task_completion' => 94,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, A1ScenarioSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'prisistatymas',
+            'scene_id' => 'pasisveikinimas',
+            'goal_id' => 'intro-name',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner says where they are.',
+            'example' => 'Aš esu kavinėje.',
+            'context' => 'Saying where you are.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('feedback', 'That answer worked for this situation.')
+            ->assertJsonPath('communication.note', 'That answer worked for this situation.');
+    }
+
+    public function test_speech_check_hides_redundant_same_sentence_suggestion(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Kur yra tualetas?']);
+        SpeakingJudge::fake([[
+            'pass' => true,
+            'should_retry' => false,
+            'retry_reason' => '',
+            'feedback' => 'More natural: Kur yra tualetas?',
+            'normalized_transcript' => 'Kur yra tualetas?',
+            'normalization_confidence' => 'high',
+            'normalization_note' => '',
+            'suggested_response' => 'Kur yra tualetas?',
+            'corrected' => 'Kur yra tualetas?',
+            'intent_match' => 'full',
+            'understood_meaning' => true,
+            'went_off_script' => false,
+            'communication_note' => 'You asked clearly.',
+            'improvement_focus' => 'none',
+            'scores' => [
+                'grammar' => 92,
+                'vocabulary' => 90,
+                'cohesion' => 90,
+                'task_completion' => 96,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, A1ScenarioSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'parduotuveje',
+            'scene_id' => 'kasa',
+            'goal_id' => 'shop-goodbye',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner asks where the toilet is.',
+            'example' => 'Kur yra tualetas?',
+            'context' => 'Asking for a place.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('normalized_transcript', 'Kur yra tualetas?')
+            ->assertJsonPath('suggested_response', '')
+            ->assertJsonPath('suggestion', '')
+            ->assertJsonPath('feedback', 'That answer worked for this situation.');
     }
 
     public function test_speech_check_normalizes_common_a1_speech_to_text_artifacts(): void
@@ -672,7 +947,7 @@ class AiSpeechApiTest extends TestCase
 
         SpeakingJudge::assertPrompted(fn ($prompt): bool => $prompt
             ->contains('Raw speech transcript: "Labadiana, noreciau arbatos, prasau."')
-            && $prompt->contains('Normalized transcript for judging: "Laba diena, norėčiau arbatos, prašau."'));
+            && $prompt->contains('Interpreted transcript for judging: "Laba diena, norėčiau arbatos, prašau."'));
     }
 
     public function test_speech_check_defaults_missing_communication_metadata_for_older_judge_payloads(): void

@@ -89,6 +89,7 @@ class ScenarioResource extends JsonResource
                     'label' => $goal->translated('label', $locale, $goal->label),
                     'intent' => $goal->translated('intent', $locale, $goal->intent),
                     'example' => $goal->example,
+                    'accepted_phrases' => $goal->accepted_phrases ?? [],
                     'cefr_level' => $goal->cefr_level?->value,
                     'next' => $goal->nextScene?->slug,
                 ])->values(),

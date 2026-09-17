@@ -22,10 +22,11 @@ class FakeSpeechEvaluator implements SpeechEvaluatorContract
         string $targetLanguageName = 'Lithuanian',
         string $feedbackLanguageCode = 'en',
         string $feedbackLanguageName = 'English',
+        array $acceptedPhrases = [],
     ): array {
         $transcript = (string) config('services.kalbek.fake_speech_transcript', 'Ar turite maisto?');
         $pass = (bool) config('services.kalbek.fake_speech_pass', true);
-        $suggestedResponse = $example !== '' ? $example : $transcript;
+        $suggestedResponse = $pass ? '' : ($example !== '' ? $example : $transcript);
 
         return [
             'transcript' => $transcript,
@@ -48,6 +49,12 @@ class FakeSpeechEvaluator implements SpeechEvaluatorContract
                     ? ($feedbackLanguageCode === 'lt' ? 'Pasakytas atsakymas atitinka dabartinę užduotį.' : 'The spoken answer satisfies the current goal.')
                     : ($feedbackLanguageCode === 'lt' ? 'Pasakytą atsakymą reikia pakartoti.' : 'The spoken answer needs another try.'),
                 'improvement_focus' => $pass ? 'none' : 'task',
+            ],
+            'interpretation' => [
+                'confidence' => 'high',
+                'note' => '',
+                'matched_phrase' => null,
+                'source' => 'fake',
             ],
             'scores' => [
                 'grammar' => 78,

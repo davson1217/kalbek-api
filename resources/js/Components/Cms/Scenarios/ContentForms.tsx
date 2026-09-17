@@ -51,7 +51,7 @@ export function ScenarioNoteForm({ action, levels, method = 'post', note, onSucc
 }
 
 export function GoalForm({ action, goal, levels, method = 'post', onSuccess, sceneOptions }: { action: string; goal?: GoalRecord; levels: string[]; method?: Method; onSuccess?: () => void; sceneOptions: Array<{ value: number; label: string }> }) {
-    const form = useForm({ slug: goal?.slug ?? '', label: goal?.label ?? '', intent: goal?.intent ?? '', example: goal?.example ?? '', cefr_level: goal?.cefr_level ?? '', next_scene_id: goal?.next_scene_id ?? '', sort_order: goal?.sort_order ?? 0, translations: goal?.translations ?? {} });
+    const form = useForm({ slug: goal?.slug ?? '', label: goal?.label ?? '', intent: goal?.intent ?? '', example: goal?.example ?? '', accepted_phrases: goal?.accepted_phrases?.join('\n') ?? '', cefr_level: goal?.cefr_level ?? '', next_scene_id: goal?.next_scene_id ?? '', sort_order: goal?.sort_order ?? 0, translations: goal?.translations ?? {} });
 
     return (
         <form onSubmit={(event) => submit(event, form, action, method, onSuccess)} className="grid gap-4 md:grid-cols-2">
@@ -62,6 +62,7 @@ export function GoalForm({ action, goal, levels, method = 'post', onSuccess, sce
             <TextField label="Sort" placeholder="0" help="Controls the display order of goals in this scene." type="number" value={form.data.sort_order} onChange={(value) => form.setData('sort_order', Number(value))} />
             <div className="md:col-span-2"><Textarea label="What the learner is trying to say" placeholder="The learner wants to know whether a table is available." help="Describe the meaning we should accept from the learner, not just one exact sentence." value={form.data.intent} onChange={(value) => form.setData('intent', value)} /></div>
             <div className="md:col-span-2"><Textarea label="Example learner phrase" placeholder="Ar turite laisvą staliuką?" help="One good target-language example that expresses this goal." value={form.data.example} onChange={(value) => form.setData('example', value)} /></div>
+            <div className="md:col-span-2"><Textarea label="Accepted phrases" placeholder={'Labas rytas.\nLabas rytas!'} help="Optional. Add one valid phrase per line when this goal should accept specific variants. Leave empty for open answers like names, countries, or cities." value={form.data.accepted_phrases} onChange={(value) => form.setData('accepted_phrases', value)} rows={4} /></div>
             <TranslationFields fields={['label', 'intent']} translations={form.data.translations} onChange={(translations) => form.setData('translations', translations)} />
             <div className="md:col-span-2"><PrimaryButton type="submit" icon={Save} disabled={form.processing}>{goal ? 'Save goal' : 'Create goal'}</PrimaryButton></div>
         </form>

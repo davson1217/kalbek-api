@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'label',
     'intent',
     'example',
+    'accepted_phrases',
     'cefr_level',
     'sort_order',
 ])]
@@ -49,6 +50,7 @@ class Goal extends Model
         return [
             'sort_order' => 'integer',
             'cefr_level' => CefrLevel::class,
+            'accepted_phrases' => 'array',
         ];
     }
 }

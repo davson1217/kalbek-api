@@ -67,9 +67,9 @@ class SusipazinkimeUnitSeeder extends Seeder
 
                 $this->syncTranslations($scenario, $scenarioData['translations']);
                 $this->upsertNote($scenario, $scenarioData['note']);
+                $this->deleteRemovedScenes($scenario, $scenarioData['scenes']);
                 $scenes = $this->upsertScenes($scenario, $scenarioData['scenes']);
                 $this->replaceSceneContent($scenes, $scenarioData['scenes']);
-                $this->deleteRemovedScenes($scenario, $scenarioData['scenes']);
             }
         });
     }
@@ -120,14 +120,17 @@ class SusipazinkimeUnitSeeder extends Seeder
     private function replaceSceneContent(Collection $scenes, array $sceneData): void
     {
         foreach ($sceneData as $scene) {
+            $sceneModel = $scenes->get($scene['slug']);
+
             foreach ($scene['goals'] as $index => $goal) {
-                $model = $scenes->get($scene['slug'])->goals()->updateOrCreate(
+                $model = $sceneModel->goals()->updateOrCreate(
                     ['slug' => $goal['slug']],
                     [
                         'next_scene_id' => $goal['next'] ? $scenes->get($goal['next'])?->id : null,
                         'label' => $goal['label'],
                         'intent' => $goal['intent'],
                         'example' => $goal['example'],
+                        'accepted_phrases' => $goal['accepted_phrases'] ?? null,
                         'cefr_level' => 'a1',
                         'sort_order' => ($index + 1) * 10,
                     ],
@@ -135,6 +138,10 @@ class SusipazinkimeUnitSeeder extends Seeder
 
                 $this->syncTranslations($model, $goal['translations']);
             }
+
+            $sceneModel->goals()
+                ->whereNotIn('slug', collect($scene['goals'])->pluck('slug')->all())
+                ->delete();
         }
 
         $goals = Goal::query()
@@ -267,6 +274,7 @@ class SusipazinkimeUnitSeeder extends Seeder
                                 'label' => 'Say good morning',
                                 'intent' => 'The learner greets Gabija in the morning.',
                                 'example' => 'Labas rytas.',
+                                'accepted_phrases' => ['Labas rytas.'],
                                 'next' => 'atsisveikinimas',
                                 'translations' => [
                                     'label' => ['en' => 'Say good morning', 'lt' => 'Pasakykite „labas rytas“'],
@@ -295,6 +303,7 @@ class SusipazinkimeUnitSeeder extends Seeder
                                 'label' => 'Say goodbye',
                                 'intent' => 'The learner says goodbye.',
                                 'example' => 'Viso gero.',
+                                'accepted_phrases' => ['Viso gero.', 'Iki.', 'Iki pasimatymo.'],
                                 'next' => null,
                                 'translations' => [
                                     'label' => ['en' => 'Say goodbye', 'lt' => 'Atsisveikinkite'],
@@ -401,6 +410,7 @@ class SusipazinkimeUnitSeeder extends Seeder
                                 'label' => 'Ask her name',
                                 'intent' => 'The learner asks another person’s name.',
                                 'example' => 'Koks jūsų vardas?',
+                                'accepted_phrases' => ['Koks jūsų vardas?', 'Kuo jūs vardu?', 'Kuo tu vardu?'],
                                 'next' => null,
                                 'translations' => [
                                     'label' => ['en' => 'Ask her name', 'lt' => 'Paklauskite jos vardo'],
@@ -478,6 +488,7 @@ class SusipazinkimeUnitSeeder extends Seeder
                                 'label' => 'Answer yes',
                                 'intent' => 'The learner confirms a simple identity statement.',
                                 'example' => 'Taip, aš esu studentas.',
+                                'accepted_phrases' => ['Taip, aš esu studentas.', 'Taip, esu studentas.'],
                                 'next' => 'neiginys',
                                 'translations' => [
                                     'label' => ['en' => 'Answer yes', 'lt' => 'Atsakykite „taip“'],
@@ -495,8 +506,8 @@ class SusipazinkimeUnitSeeder extends Seeder
                             'setting' => ['en' => 'Gabija asks a simple identity question that the learner denies.', 'lt' => 'Gabija klausia paprasto klausimo, į kurį mokinys atsako neigiamai.'],
                         ],
                         'lines' => [
-                            ['target_text' => 'Ar jūs esate mokytojas?', 'support_translation' => 'Are you a teacher?', 'trigger_goal' => null],
-                            ['target_text' => 'Dabar atsakykite neigiamai: ar jūs esate mokytojas?', 'support_translation' => 'Now answer negatively: are you a teacher?', 'trigger_goal' => null],
+                            ['target_text' => 'Ar jūs esate studentas?', 'support_translation' => 'Are you a student?', 'trigger_goal' => null],
+                            ['target_text' => 'Dabar atsakykite neigiamai: ar jūs esate studentas?', 'support_translation' => 'Now answer negatively: are you a student?', 'trigger_goal' => null],
                             ['target_text' => 'Teisingai. „Nesu“ reiškia „am not“.', 'support_translation' => 'Correct. “Nesu” means “am not.”', 'trigger_goal' => 'answer-no', 'priority' => 100],
                             ['target_text' => 'Labai gerai. Jūs pavartojote neiginį.', 'support_translation' => 'Very good. You used negation.', 'trigger_goal' => 'answer-no', 'priority' => 100],
                         ],
@@ -504,12 +515,13 @@ class SusipazinkimeUnitSeeder extends Seeder
                             [
                                 'slug' => 'answer-no',
                                 'label' => 'Answer no',
-                                'intent' => 'The learner denies a simple identity statement with ne or nesu.',
-                                'example' => 'Ne, aš nesu mokytojas.',
+                                'intent' => 'The learner denies being a student with ne or nesu.',
+                                'example' => 'Ne, aš nesu studentas.',
+                                'accepted_phrases' => ['Ne, aš nesu studentas.', 'Ne, nesu studentas.'],
                                 'next' => null,
                                 'translations' => [
                                     'label' => ['en' => 'Answer no', 'lt' => 'Atsakykite „ne“'],
-                                    'intent' => ['en' => 'The learner denies a simple identity statement with ne or nesu.', 'lt' => 'Mokinys paneigia paprastą teiginį vartodamas ne arba nesu.'],
+                                    'intent' => ['en' => 'The learner denies being a student with ne or nesu.', 'lt' => 'Mokinys paneigia, kad yra studentas, vartodamas ne arba nesu.'],
                                 ],
                             ],
                         ],

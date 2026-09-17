@@ -26,6 +26,7 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         string $targetLanguageName = 'Lithuanian',
         string $feedbackLanguageCode = 'en',
         string $feedbackLanguageName = 'English',
+        array $acceptedPhrases = [],
     ): array {
         $transcriptionProvider = config('ai.default_for_transcription');
         $transcriptionModel = config('services.kalbek.transcription_model');
@@ -70,23 +71,34 @@ class SpeechEvaluator implements SpeechEvaluatorContract
             ];
         }
 
-        $normalizedTranscript = $this->normalizeTranscriptForJudging($transcript);
+        $interpretation = (new SpeechInterpretation)->interpret(
+            $transcript,
+            $example,
+            $acceptedPhrases,
+            $feedbackLanguageCode,
+        );
+        $normalizedTranscript = $interpretation['transcript'];
         $contentCefrLevel = $this->validCefrLevel($contentCefrLevel, CefrLevel::A1->value);
         $learnerCefrLevel = $this->validCefrLevel($learnerCefrLevel, CefrLevel::PreA1->value);
+        $acceptedPhraseText = collect($acceptedPhrases)->filter()->values()->implode(' | ');
         $verdict = $this->verdictArray(SpeakingJudge::make()->prompt(
             "Situation: {$context}\n"
             ."Target language: {$targetLanguageName} ({$targetLanguageCode})\n"
             ."Feedback language: {$feedbackLanguageName} ({$feedbackLanguageCode})\n"
             ."The learner must express: {$intent}\n"
-            ."Model phrasing: {$example}\n"
+            ."Reference learner phrasing: {$example}\n"
+            ."Accepted phrases for this exact goal: {$acceptedPhraseText}\n"
             ."Content CEFR level: {$contentCefrLevel}\n"
             ."Current estimated learner CEFR level: {$learnerCefrLevel}\n"
             ."Judge relative to the content CEFR level. Use the learner level only as background for encouraging feedback, not as a reason to fail a valid answer.\n"
             ."The learner may answer naturally and include extra social detail. Judge whether the current communicative goal was answered, not whether the exact model phrase was repeated.\n"
             .'Evaluation mode: '.$this->evaluationModeInstruction($strict, $contentCefrLevel, $targetLanguageName)."\n"
             ."Raw speech transcript: \"{$transcript}\"\n"
-            ."Normalized transcript for judging: \"{$normalizedTranscript}\"\n"
+            ."Interpreted transcript for judging: \"{$normalizedTranscript}\"\n"
+            ."Interpretation confidence: {$interpretation['confidence']}\n"
+            ."Interpretation source: {$interpretation['source']}\n"
             ."Judge the spoken answer, not the transcript formatting.\n"
+            ."When interpretation confidence is high or medium, reason from the interpreted transcript, not raw STT artifacts. When confidence is low, request a retry for clearer audio instead of criticizing grammar.\n"
             ."Write feedback, retry_reason, normalization_note, and communication_note in {$feedbackLanguageName}. Keep normalized_transcript and suggested_response in {$targetLanguageName}.",
             timeout: 45,
         ));
@@ -94,11 +106,24 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         $scores = $this->scoresFromVerdict($verdict);
         $overallScore = $this->overallScore($scores);
         $pass = (bool) ($verdict['pass'] ?? false);
-        $normalizationConfidence = $this->normalizationConfidence($verdict['normalization_confidence'] ?? null);
-        $normalizationNote = $this->speechFirstFeedback((string) ($verdict['normalization_note'] ?? ''), $example, $feedbackLanguageCode);
-        $shouldRetry = (bool) ($verdict['should_retry'] ?? (! $pass)) || $normalizationConfidence === 'low';
+        $normalizationConfidence = $this->lowerConfidence(
+            $this->normalizationConfidence($verdict['normalization_confidence'] ?? null),
+            $interpretation['confidence'],
+        );
+        $normalizedTranscript = trim((string) ($verdict['normalized_transcript'] ?? $normalizedTranscript));
+        $normalizationNote = $this->cleanTutorFeedback(
+            $this->speechFirstFeedback((string) ($verdict['normalization_note'] ?? $interpretation['note']), $example, $feedbackLanguageCode),
+            $pass,
+            $feedbackLanguageCode,
+        );
+        $strictAcceptedPhraseMiss = $strict && $acceptedPhrases !== [] && $interpretation['source'] !== 'accepted_phrase';
+        $shouldRetry = (bool) ($verdict['should_retry'] ?? (! $pass)) || $normalizationConfidence === 'low' || $strictAcceptedPhraseMiss;
         $retryReason = $shouldRetry
-            ? $this->speechFirstFeedback((string) ($verdict['retry_reason'] ?? ''), $example, $feedbackLanguageCode)
+            ? $this->cleanTutorFeedback(
+                $this->speechFirstFeedback((string) ($verdict['retry_reason'] ?? ''), $example, $feedbackLanguageCode),
+                $pass,
+                $feedbackLanguageCode,
+            )
             : '';
 
         if ($shouldRetry && $normalizationConfidence === 'low' && $retryReason === '') {
@@ -108,12 +133,23 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         }
 
         if ($shouldRetry && $retryReason === '') {
-            $retryReason = $this->localizedMessage('try_once_more', $feedbackLanguageCode);
+            $retryReason = $strictAcceptedPhraseMiss
+                ? $this->localizedMessage('strict_goal_phrase', $feedbackLanguageCode)
+                : $this->localizedMessage('try_once_more', $feedbackLanguageCode);
         }
 
         $canContinue = $pass && ! $shouldRetry;
-        $normalizedTranscript = trim((string) ($verdict['normalized_transcript'] ?? $normalizedTranscript));
-        $suggestedResponse = trim((string) ($verdict['suggested_response'] ?? ($example !== '' ? $example : ($verdict['corrected'] ?? ''))));
+        $suggestedResponse = trim((string) ($verdict['suggested_response'] ?? ($canContinue ? '' : ($example !== '' ? $example : ($verdict['corrected'] ?? '')))));
+        if ($this->equivalentSpokenText($suggestedResponse, $normalizedTranscript)) {
+            $suggestedResponse = '';
+        }
+        $feedback = $this->cleanTutorFeedback(
+            $this->speechFirstFeedback((string) ($verdict['feedback'] ?? $this->localizedMessage('try_that_again', $feedbackLanguageCode)), $example, $feedbackLanguageCode),
+            $pass,
+            $feedbackLanguageCode,
+        );
+        $feedback = $this->withoutRedundantSuggestion($feedback, $normalizedTranscript, $feedbackLanguageCode);
+        $feedback = $this->withoutContradictingInterpretation($feedback, $normalizedTranscript, $pass, $feedbackLanguageCode);
 
         return [
             'transcript' => $transcript,
@@ -124,11 +160,17 @@ class SpeechEvaluator implements SpeechEvaluatorContract
             'can_continue' => $canContinue,
             'should_retry' => $shouldRetry,
             'retry_reason' => $retryReason,
-            'feedback' => $this->speechFirstFeedback((string) ($verdict['feedback'] ?? $this->localizedMessage('try_that_again', $feedbackLanguageCode)), $example, $feedbackLanguageCode),
+            'feedback' => $feedback,
             'corrected' => $normalizedTranscript,
             'suggested_response' => $suggestedResponse,
             'suggestion' => $suggestedResponse,
             'communication' => $this->communicationFromVerdict($verdict, $pass, $feedbackLanguageCode),
+            'interpretation' => [
+                'confidence' => $interpretation['confidence'],
+                'note' => $interpretation['note'],
+                'matched_phrase' => $interpretation['matched_phrase'],
+                'source' => $interpretation['source'],
+            ],
             'scores' => $scores,
             'overall_score' => $overallScore,
             'attempt_cefr_level' => (string) ($verdict['attempt_cefr_level'] ?? CefrLevel::estimateFromScore($overallScore)->value),
@@ -171,9 +213,121 @@ class SpeechEvaluator implements SpeechEvaluatorContract
             'intent_match' => in_array($intentMatch, ['full', 'partial', 'off_topic'], true) ? $intentMatch : ($passed ? 'full' : 'partial'),
             'understood_meaning' => (bool) ($verdict['understood_meaning'] ?? $passed),
             'went_off_script' => (bool) ($verdict['went_off_script'] ?? false),
-            'note' => $this->speechFirstFeedback((string) ($verdict['communication_note'] ?? ($passed ? $this->localizedMessage('goal_answered', $feedbackLanguageCode) : $this->localizedMessage('goal_partial', $feedbackLanguageCode))), '', $feedbackLanguageCode),
+            'note' => $this->cleanTutorFeedback(
+                $this->speechFirstFeedback((string) ($verdict['communication_note'] ?? ($passed ? $this->localizedMessage('goal_answered', $feedbackLanguageCode) : $this->localizedMessage('goal_partial', $feedbackLanguageCode))), '', $feedbackLanguageCode),
+                $passed,
+                $feedbackLanguageCode,
+            ),
             'improvement_focus' => in_array($focus, ['grammar', 'vocabulary', 'pronunciation', 'coherence', 'task', 'none'], true) ? $focus : ($passed ? 'none' : 'task'),
         ];
+    }
+
+    private function cleanTutorFeedback(string $feedback, bool $passed, string $feedbackLanguageCode = 'en'): string
+    {
+        if ($feedback === '') {
+            return '';
+        }
+
+        $internalTerms = [
+            'allowed phrase',
+            'allowed phrases',
+            'expected answer',
+            'model answer',
+            'model list',
+            'model phrase',
+            'npc line',
+            'prompt',
+            'rubric',
+            'schema',
+        ];
+
+        if (! str($feedback)->lower()->contains($internalTerms)) {
+            return $feedback;
+        }
+
+        if ($feedbackLanguageCode === 'lt') {
+            return $passed
+                ? 'Atsakymas tiko šiai situacijai.'
+                : 'Pabandykite dar kartą trumpu, aiškiu atsakymu šiai situacijai.';
+        }
+
+        return $passed
+            ? 'That answer worked for this situation.'
+            : 'Try again with a short, clear answer for this situation.';
+    }
+
+    private function withoutRedundantSuggestion(string $feedback, string $normalizedTranscript, string $feedbackLanguageCode = 'en'): string
+    {
+        if ($feedback === '' || $normalizedTranscript === '') {
+            return $feedback;
+        }
+
+        $sameSuggestionPatterns = [
+            '/\s*(A more natural spoken version is|More natural|Better|Try saying):\s*[“"]?'.preg_quote($normalizedTranscript, '/').'[”"]?\.?/iu',
+            '/\s*(Natūralesnis pasakymas būtų|Natūraliau|Pabandykite sakyti):\s*[„"]?'.preg_quote($normalizedTranscript, '/').'[“"]?\.?/iu',
+        ];
+
+        $cleaned = trim((string) preg_replace($sameSuggestionPatterns, '', $feedback));
+
+        if ($cleaned !== '') {
+            return $cleaned;
+        }
+
+        return $feedbackLanguageCode === 'lt'
+            ? 'Atsakymas tiko šiai situacijai.'
+            : 'That answer worked for this situation.';
+    }
+
+    private function withoutContradictingInterpretation(string $feedback, string $normalizedTranscript, bool $passed, string $feedbackLanguageCode = 'en'): string
+    {
+        if ($feedback === '' || $normalizedTranscript === '') {
+            return $feedback;
+        }
+
+        preg_match_all('/[\'"“”‘’]([\p{L}]{2,})[\'"“”‘’]/u', $feedback, $matches);
+        if (($matches[1] ?? []) === []) {
+            return $feedback;
+        }
+
+        $normalizedWords = collect(explode(' ', $this->comparisonText($normalizedTranscript)))
+            ->filter()
+            ->values();
+
+        foreach ($matches[1] as $quotedWord) {
+            $quoted = $this->comparisonText($quotedWord);
+            if ($quoted === '' || $normalizedWords->contains($quoted)) {
+                continue;
+            }
+
+            $nearInterpretedWord = $normalizedWords->contains(
+                fn (string $word): bool => abs(strlen($word) - strlen($quoted)) <= 2 && levenshtein($word, $quoted) <= 2,
+            );
+
+            if ($nearInterpretedWord) {
+                return $this->cleanTutorFeedback('', $passed, $feedbackLanguageCode)
+                    ?: ($feedbackLanguageCode === 'lt' ? 'Atsakymas buvo suprantamas.' : 'That answer was understandable.');
+            }
+        }
+
+        return $feedback;
+    }
+
+    private function equivalentSpokenText(string $first, string $second): bool
+    {
+        if ($first === '' || $second === '') {
+            return false;
+        }
+
+        return $this->comparisonText($first) === $this->comparisonText($second);
+    }
+
+    private function comparisonText(string $value): string
+    {
+        return str($value)
+            ->lower()
+            ->replaceMatches('/[^\p{L}\p{N}\s]+/u', ' ')
+            ->squish()
+            ->toString();
     }
 
     private function evaluationModeInstruction(bool $strict, string $contentCefrLevel, string $targetLanguageName): string
@@ -209,29 +363,11 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         return in_array($value, ['high', 'medium', 'low'], true) ? $value : 'high';
     }
 
-    private function normalizeTranscriptForJudging(string $transcript): string
+    private function lowerConfidence(string $first, string $second): string
     {
-        return str($transcript)
-            ->replaceMatches('/\blaba\s*d[iey]a?na\b/iu', 'Laba diena')
-            ->replaceMatches('/\blaba\s*diena\b/iu', 'Laba diena')
-            ->replaceMatches('/\blabas\s*diena\b/iu', 'Laba diena')
-            ->replaceMatches('/\blabadiena\b/iu', 'Laba diena')
-            ->replaceMatches('/\blabadiana\b/iu', 'Laba diena')
-            ->replaceMatches('/\blabasdiena\b/iu', 'Laba diena')
-            ->replaceMatches('/\blaba\s*rytas\b/iu', 'Labas rytas')
-            ->replaceMatches('/\blabasrytas\b/iu', 'Labas rytas')
-            ->replaceMatches('/\blabas\s*vakaras\b/iu', 'Labas vakaras')
-            ->replaceMatches('/\blabasvakaras\b/iu', 'Labas vakaras')
-            ->replaceMatches('/\baciu\b/iu', 'Ačiū')
-            ->replaceMatches('/\bachiu\b/iu', 'Ačiū')
-            ->replaceMatches('/\bprasau\b/iu', 'prašau')
-            ->replaceMatches('/\bprasom\b/iu', 'prašom')
-            ->replaceMatches('/\bviso\s*gero\b/iu', 'viso gero')
-            ->replaceMatches('/\bvisogero\b/iu', 'viso gero')
-            ->replaceMatches('/\bnoreciau\b/iu', 'norėčiau')
-            ->replaceMatches('/\bmokesiu\b/iu', 'mokėsiu')
-            ->replaceMatches('/\bkortele\b/iu', 'kortele')
-            ->toString();
+        $rank = ['low' => 0, 'medium' => 1, 'high' => 2];
+
+        return ($rank[$first] ?? 2) <= ($rank[$second] ?? 2) ? $first : $second;
     }
 
     private function speechFirstFeedback(string $feedback, string $example, string $feedbackLanguageCode = 'en'): string
@@ -278,6 +414,7 @@ class SpeechEvaluator implements SpeechEvaluatorContract
                 'try_that_again' => 'Pabandykite dar kartą.',
                 'goal_answered' => 'Aiškiai atsakėte į užduotį.',
                 'goal_partial' => 'Atsakymas susijęs, bet dar nevisiškai įvykdo užduotį.',
+                'strict_goal_phrase' => 'Šiame režime pabandykite pavartoti tikslinę šios užduoties frazę.',
             ],
             'en' => [
                 'no_speech_detected' => 'No speech was detected.',
@@ -288,6 +425,7 @@ class SpeechEvaluator implements SpeechEvaluatorContract
                 'try_that_again' => 'Try that again.',
                 'goal_answered' => 'You answered the goal clearly.',
                 'goal_partial' => 'Your answer was related, but did not fully answer the goal.',
+                'strict_goal_phrase' => 'In strict mode, try using the target phrase for this goal.',
             ],
         ];
 

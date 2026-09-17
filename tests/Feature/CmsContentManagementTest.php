@@ -199,6 +199,7 @@ class CmsContentManagementTest extends TestCase
             'label' => 'Ask a test question',
             'intent' => 'Ask a short teacher-authored test question.',
             'example' => 'Ar turite testą?',
+            'accepted_phrases' => "Ar turite testa?\nAr yra testas?",
             'cefr_level' => 'a1',
             'next_scene_id' => null,
             'sort_order' => 10,
@@ -209,6 +210,7 @@ class CmsContentManagementTest extends TestCase
         ])->assertRedirect();
 
         $goal = Goal::query()->where('scene_id', $scene->id)->where('slug', 'test-goal')->firstOrFail();
+        $this->assertSame(['Ar turite testa?', 'Ar yra testas?'], $goal->accepted_phrases);
 
         $this->actingAs($admin)->post(route('cms.scenarios.scenes.lines.store', [$scenario, $scene]), [
             'target_text' => 'Taip, turime testą.',
@@ -250,6 +252,7 @@ class CmsContentManagementTest extends TestCase
                 ->component('Scenarios/Show')
                 ->where('scenario.scenes.5.title', 'Test scene')
                 ->where('scenario.scenes.5.translations.title.lt', 'Bandomoji scena')
+                ->where('scenario.scenes.5.goals.0.accepted_phrases.1', 'Ar yra testas?')
                 ->where('scenario.scenes.5.goals.0.response_lines.0.target_text', 'Taip, turime testą.'));
     }
 

@@ -74,6 +74,12 @@ export function ScenePanel({ auditIssues, goalOptions, levels, scenario, scene, 
                                     </div>
                                     <p className="mt-3 text-sm leading-6 text-slate-600">{goal.intent}</p>
                                     <p className="mt-2 rounded-xl bg-cyan-50 px-3 py-2 text-sm font-semibold text-cyan-900">Example: {goal.example}</p>
+                                    {goal.accepted_phrases.length > 0 ? (
+                                        <div className="mt-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2">
+                                            <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-700">Accepted phrases</p>
+                                            <p className="mt-1 text-sm font-semibold text-emerald-950">{goal.accepted_phrases.join(' · ')}</p>
+                                        </div>
+                                    ) : null}
 
                                     <div className="mt-5 border-t border-dashed border-slate-200 pt-4">
                                         <div className="mb-3 flex items-center justify-between gap-3">

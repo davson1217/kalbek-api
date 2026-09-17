@@ -131,4 +131,48 @@ class ScenarioContentAuditTest extends TestCase
             ->expectsOutputToContain('but its parent content is level [b1]')
             ->assertFailed();
     }
+
+    public function test_audit_warns_about_accepted_phrase_hygiene(): void
+    {
+        $this->seed(CharacterSeeder::class);
+        $scenario = Scenario::factory()->create(['slug' => 'accepted-phrases', 'start_scene_slug' => 'start']);
+        $scene = Scene::factory()->for($scenario)->create(['slug' => 'start']);
+        $goal = Goal::factory()->for($scene)->create([
+            'slug' => 'greeting',
+            'label' => 'Say good morning',
+            'intent' => 'The learner greets in the morning.',
+            'example' => 'Labas rytas.',
+            'accepted_phrases' => ['Hello.', 'Labas.', 'Labas!'],
+        ]);
+
+        NpcLine::factory()->for($scene)->create(['trigger_goal_id' => null]);
+        NpcLine::factory()->for($scene)->create(['trigger_goal_id' => $goal->id]);
+
+        $this->artisan('kalbek:audit-content --fail')
+            ->expectsOutputToContain('has accepted phrases but does not include its example phrase')
+            ->expectsOutputToContain('has duplicate accepted phrases after normalization')
+            ->expectsOutputToContain('appears to be in the support language')
+            ->assertFailed();
+    }
+
+    public function test_audit_warns_when_open_ended_goal_has_accepted_phrases(): void
+    {
+        $this->seed(CharacterSeeder::class);
+        $scenario = Scenario::factory()->create(['slug' => 'open-ended', 'start_scene_slug' => 'start']);
+        $scene = Scene::factory()->for($scenario)->create(['slug' => 'start']);
+        $goal = Goal::factory()->for($scene)->create([
+            'slug' => 'name',
+            'label' => 'Say your name',
+            'intent' => 'The learner says their name.',
+            'example' => 'Mano vardas Deividas.',
+            'accepted_phrases' => ['Mano vardas Deividas.'],
+        ]);
+
+        NpcLine::factory()->for($scene)->create(['trigger_goal_id' => null]);
+        NpcLine::factory()->for($scene)->create(['trigger_goal_id' => $goal->id]);
+
+        $this->artisan('kalbek:audit-content --fail')
+            ->expectsOutputToContain('looks open-ended but has accepted phrases configured')
+            ->assertFailed();
+    }
 }

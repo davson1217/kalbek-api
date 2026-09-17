@@ -21,7 +21,7 @@ class AuditScenarioContent
         $issues = [];
 
         $query = Scenario::query()
-            ->with(['scenes.goals.nextScene', 'scenes.goals.responseLines', 'scenes.npcLines.triggerGoal'])
+            ->with(['language', 'scenes.goals.nextScene', 'scenes.goals.responseLines', 'scenes.npcLines.triggerGoal'])
             ->orderBy('sort_order');
 
         if ($onlyScenario) {
@@ -299,6 +299,8 @@ class AuditScenarioContent
             );
         }
 
+        array_push($issues, ...$this->auditAcceptedPhrases($scenario, $scene, $goal));
+
         foreach ($this->exampleSpecificTokens($goal) as $token) {
             if ($goal->responseLines->contains(fn (NpcLine $line): bool => Str::contains($line->target_text.' '.$line->support_translation, $token, true))) {
                 $issues[] = $this->issue(
@@ -312,6 +314,110 @@ class AuditScenarioContent
                     goal: $goal,
                 );
             }
+        }
+
+        return $issues;
+    }
+
+    /**
+     * @return array<int, array{severity: string, category: string, scope: string, scenario_slug: string, scene_slug?: string, goal_slug?: string, line_id?: int, message: string, recommendation: string}>
+     */
+    private function auditAcceptedPhrases(Scenario $scenario, Scene $scene, Goal $goal): array
+    {
+        $phrases = collect($goal->accepted_phrases ?? [])
+            ->map(fn (mixed $phrase): string => trim((string) $phrase));
+
+        if ($phrases->isEmpty()) {
+            return [];
+        }
+
+        $issues = [];
+        $nonEmptyPhrases = $phrases->filter()->values();
+        $normalizedPhrases = $nonEmptyPhrases
+            ->map(fn (string $phrase): string => $this->comparisonText($phrase))
+            ->filter()
+            ->values();
+        $normalizedExample = $this->comparisonText($goal->example);
+
+        if ($phrases->contains('')) {
+            $issues[] = $this->issue(
+                'warning',
+                'accepted_phrases',
+                'goal',
+                $scenario,
+                "Goal [{$scenario->slug}/{$scene->slug}/{$goal->slug}] has an empty accepted phrase.",
+                'Remove blank accepted phrase entries. In the CMS, keep one valid phrase per line.',
+                scene: $scene,
+                goal: $goal,
+            );
+        }
+
+        if ($normalizedExample !== '' && ! $normalizedPhrases->contains($normalizedExample)) {
+            $issues[] = $this->issue(
+                'warning',
+                'accepted_phrases',
+                'goal',
+                $scenario,
+                "Goal [{$scenario->slug}/{$scene->slug}/{$goal->slug}] has accepted phrases but does not include its example phrase.",
+                'Add the example phrase to accepted phrases, or clear accepted phrases if this is an open-ended goal.',
+                scene: $scene,
+                goal: $goal,
+            );
+        }
+
+        $duplicate = $normalizedPhrases
+            ->duplicates()
+            ->first();
+        if ($duplicate) {
+            $issues[] = $this->issue(
+                'warning',
+                'accepted_phrases',
+                'goal',
+                $scenario,
+                "Goal [{$scenario->slug}/{$scene->slug}/{$goal->slug}] has duplicate accepted phrases after normalization.",
+                'Remove duplicate variants that only differ by punctuation, casing, or accents.',
+                scene: $scene,
+                goal: $goal,
+            );
+        }
+
+        if ($nonEmptyPhrases->count() > 8) {
+            $issues[] = $this->issue(
+                'warning',
+                'accepted_phrases',
+                'goal',
+                $scenario,
+                "Goal [{$scenario->slug}/{$scene->slug}/{$goal->slug}] has [{$nonEmptyPhrases->count()}] accepted phrases.",
+                'Use accepted phrases only for tightly controlled goals. For broad answer ranges, leave them empty and let the judge evaluate meaning.',
+                scene: $scene,
+                goal: $goal,
+            );
+        }
+
+        if ($this->looksOpenEnded($goal)) {
+            $issues[] = $this->issue(
+                'warning',
+                'accepted_phrases',
+                'goal',
+                $scenario,
+                "Goal [{$scenario->slug}/{$scene->slug}/{$goal->slug}] looks open-ended but has accepted phrases configured.",
+                'Leave accepted phrases empty for names, countries, cities, professions, and other personal answers unless the lesson intentionally requires a fixed value.',
+                scene: $scene,
+                goal: $goal,
+            );
+        }
+
+        if (($scenario->language?->code ?? 'lt') === 'lt' && $nonEmptyPhrases->contains(fn (string $phrase): bool => $this->looksLikeEnglishPhrase($phrase))) {
+            $issues[] = $this->issue(
+                'warning',
+                'accepted_phrases',
+                'goal',
+                $scenario,
+                "Goal [{$scenario->slug}/{$scene->slug}/{$goal->slug}] has an accepted phrase that appears to be in the support language.",
+                'Accepted phrases should be target-language phrases. Put translations in translation fields, not accepted phrases.',
+                scene: $scene,
+                goal: $goal,
+            );
         }
 
         return $issues;
@@ -393,6 +499,45 @@ class AuditScenarioContent
             ->reject(fn (string $token): bool => Str::contains($goal->label.' '.$goal->intent, $token, true))
             ->unique()
             ->values();
+    }
+
+    private function looksOpenEnded(Goal $goal): bool
+    {
+        $text = str($goal->label.' '.$goal->intent)->lower();
+
+        return $text->contains([
+            'says their name',
+            'says his name',
+            'says her name',
+            'say your name',
+            'country or city',
+            'where they live',
+            'where you live',
+            'what country',
+            'what city',
+            'their profession',
+            'their job',
+            'personal',
+        ]);
+    }
+
+    private function looksLikeEnglishPhrase(string $phrase): bool
+    {
+        return preg_match(
+            '/\b(good morning|good evening|goodbye|hello|thank you|please|where is|what is|my name|i am|i live|yes|no)\b/i',
+            $this->comparisonText($phrase),
+        ) === 1;
+    }
+
+    private function comparisonText(string $value): string
+    {
+        $ascii = iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value) ?: $value;
+
+        return str($ascii)
+            ->lower()
+            ->replaceMatches('/[^\p{L}\p{N}\s]+/u', ' ')
+            ->squish()
+            ->toString();
     }
 
     private function levelExceeds(?CefrLevel $child, ?CefrLevel $parent): bool

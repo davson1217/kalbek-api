@@ -54,6 +54,7 @@ class GoalController extends Controller
             'label' => ['required', 'string', 'max:180'],
             'intent' => ['required', 'string', 'max:1000'],
             'example' => ['required', 'string', 'max:500'],
+            'accepted_phrases' => ['nullable', 'string', 'max:3000'],
             'cefr_level' => ['nullable', Rule::enum(CefrLevel::class)],
             'next_scene_id' => [
                 'nullable',
@@ -67,6 +68,12 @@ class GoalController extends Controller
     private function contentData(array $data): array
     {
         unset($data['translations']);
+        $data['accepted_phrases'] = collect(preg_split('/\R/', (string) ($data['accepted_phrases'] ?? '')))
+            ->map(fn (string $phrase): string => trim($phrase))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all() ?: null;
 
         return $data;
     }

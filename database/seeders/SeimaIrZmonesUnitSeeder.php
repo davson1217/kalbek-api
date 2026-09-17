@@ -64,9 +64,9 @@ class SeimaIrZmonesUnitSeeder extends Seeder
 
                 $this->syncTranslations($scenario, $scenarioData['translations']);
                 $this->upsertNote($scenario, $scenarioData['note']);
+                $this->deleteRemovedScenes($scenario, $scenarioData['scenes']);
                 $scenes = $this->upsertScenes($scenario, $scenarioData['scenes']);
                 $this->replaceSceneContent($scenes, $scenarioData['scenes']);
-                $this->deleteRemovedScenes($scenario, $scenarioData['scenes']);
             }
         });
     }

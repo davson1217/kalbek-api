@@ -21,5 +21,6 @@ interface SpeechEvaluatorContract
         string $targetLanguageName = 'Lithuanian',
         string $feedbackLanguageCode = 'en',
         string $feedbackLanguageName = 'English',
+        array $acceptedPhrases = [],
     ): array;
 }

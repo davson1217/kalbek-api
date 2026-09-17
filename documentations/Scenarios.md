@@ -123,11 +123,14 @@ Important columns:
 - `slug`: stable goal identifier, unique within the scene.
 - `label`: short UI option shown to the learner.
 - `intent`: judge-facing communicative goal.
-- `example`: model answer or hint for the learner.
+- `example`: reference answer or hint for the learner.
+- `accepted_phrases`: optional JSON array of valid target-language phrases for tightly controlled goals.
 - `cefr_level`: expected difficulty for judging.
 - `sort_order`: display order.
 
 Business rule: the judge evaluates whether the learner satisfied `intent`, not whether they repeated `example`. For example, if the goal is “Say your name,” “My name is David but people call me Dazza” can satisfy the intent even though it adds extra social detail.
+
+Use `accepted_phrases` only when a goal has a small controlled answer range, such as greetings, goodbyes, yes/no answers, and fixed classroom phrases. Leave it empty for open answers such as names, countries, cities, and personal details.
 
 ### NPC Line
 
@@ -178,7 +181,7 @@ Important columns:
 6. The frontend enters `scenarios.start_scene_slug`.
 7. The scene selects an opening `npc_lines` record where `trigger_goal_id` is `null`.
 8. The learner chooses one `goals` option and records speech.
-9. The API transcribes the audio and asks the SpeakingJudge whether the transcript satisfies `goals.intent` at the relevant CEFR level.
+9. The API transcribes the audio, interprets it against the active goal where appropriate, and asks the SpeakingJudge whether the interpreted transcript satisfies `goals.intent` at the relevant CEFR level.
 10. If the response can continue, the authored flow advances by `goals.next_scene_id`.
 11. The character reply is selected from `npc_lines` where `trigger_goal_id` matches the completed goal.
 12. If there is no next scene, the conversation prepares to finish after the final reply.
@@ -187,12 +190,12 @@ Important: AI does not choose the next scene. Authored CMS relationships control
 
 ## Speaking Judge Contract
 
-The judge receives the scene context, current character line, learner goal, model example, CEFR levels, and transcript.
+The judge receives the scene context, learner goal, reference example, accepted phrases, CEFR levels, raw transcript, and interpreted transcript.
 
 The judge returns language-quality information such as:
 
 - `transcript`: what STT heard.
-- `normalized_transcript`: conservative interpretation of likely speech-to-text artifacts.
+- `normalized_transcript`: conservative interpreted transcript used for learner display and judging.
 - `pass`: whether the answer satisfied the language goal.
 - `can_continue`: whether the conversation should advance.
 - `should_retry`: whether the learner should try again first.
@@ -200,6 +203,8 @@ The judge returns language-quality information such as:
 - `scores`: grammar, vocabulary, cohesion, task completion, and pronunciation when available.
 
 Product rule: never display the suggested response as if it were the learner's own speech. It should be labelled as a suggestion, for example “Try saying...” or “More natural...”.
+
+For the full STT, speech interpretation, accepted phrase, strict mode, and speaking-attempt storage flow, see `documentations/SpeechEvaluation.md`.
 
 ## Content QA
 
@@ -218,6 +223,7 @@ It currently checks for:
 - missing or inconsistent CEFR levels;
 - empty required content fields;
 - replies that appear to hardcode values from goal examples.
+- accepted phrase issues, including blank entries, duplicates after normalization, missing example phrases, overly broad lists, open-ended goals with fixed accepted phrases, and support-language phrases inside target-language accepted phrases.
 
 Run from CLI:
 

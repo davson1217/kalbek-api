@@ -2,6 +2,8 @@
 
 Kalbek uses text-to-speech audio for authored target-language content, especially NPC opening lines and replies. The current implementation is lazy: audio is generated only when a learner or browser requests a specific line for the first time.
 
+This document covers TTS and generated audio storage. For speech-to-text, learner answer interpretation, accepted phrases, SpeakingJudge behavior, and speaking attempt storage, see `documentations/SpeechEvaluation.md`.
+
 ## Current Request Flow
 
 1. The frontend calls `GET /api/v1/tts` with:

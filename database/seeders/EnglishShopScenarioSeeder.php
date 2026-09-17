@@ -96,8 +96,10 @@ class EnglishShopScenarioSeeder extends Seeder
     private function replaceSceneContent(Collection $scenes, array $sceneData): void
     {
         foreach ($sceneData as $scene) {
+            $model = $scenes->get($scene['slug']);
+
             foreach ($scene['goals'] as $index => $goal) {
-                $scenes->get($scene['slug'])->goals()->updateOrCreate(
+                $model->goals()->updateOrCreate(
                     ['slug' => $goal['slug']],
                     [
                         'next_scene_id' => $goal['next'] ? $scenes->get($goal['next'])?->id : null,
@@ -109,6 +111,10 @@ class EnglishShopScenarioSeeder extends Seeder
                     ],
                 );
             }
+
+            $model->goals()
+                ->whereNotIn('slug', collect($scene['goals'])->pluck('slug')->all())
+                ->delete();
         }
 
         $goals = Goal::query()

@@ -75,8 +75,8 @@ class SpeechCheckController extends Controller
 
         $result = $evaluator->evaluate(
             $data['audio'],
-            $data['intent'],
-            $data['example'] ?? '',
+            $goal->intent,
+            $goal->example,
             $data['context'] ?? '',
             (bool) $user->strict_speech_mode,
             $contentCefrLevel,
@@ -85,6 +85,7 @@ class SpeechCheckController extends Controller
             $targetLanguageName,
             $feedbackLanguageCode,
             $feedbackLanguageName,
+            $goal->accepted_phrases ?? [],
         );
 
         $canContinue = (bool) ($result['can_continue'] ?? ($result['pass'] && ! ($result['should_retry'] ?? false)));
@@ -114,7 +115,11 @@ class SpeechCheckController extends Controller
             'corrected_text' => $result['normalized_transcript'] ?? $result['corrected'],
             'metadata' => [
                 'intent' => $data['intent'],
-                'example' => $data['example'] ?? '',
+                'evaluated_intent' => $goal->intent,
+                'example' => $goal->example,
+                'client_intent' => $data['intent'],
+                'client_example' => $data['example'] ?? '',
+                'accepted_phrases' => $goal->accepted_phrases ?? [],
                 'context' => $data['context'] ?? '',
                 'strict_speech_mode' => (bool) $user->strict_speech_mode,
                 'content_cefr_level' => $contentCefrLevel,
@@ -133,6 +138,7 @@ class SpeechCheckController extends Controller
                 'normalization_note' => $result['normalization_note'] ?? '',
                 'suggested_response' => $result['suggested_response'] ?? $result['suggestion'] ?? '',
                 'communication' => $result['communication'],
+                'interpretation' => $result['interpretation'] ?? null,
                 'dialogue' => $dialogue,
             ],
             'evaluated_at' => now(),
