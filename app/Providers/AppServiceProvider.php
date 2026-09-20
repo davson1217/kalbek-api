@@ -11,7 +11,7 @@ use App\Services\Ai\DialogueOrchestrator;
 use App\Services\Ai\FakeDialogueOrchestrator;
 use App\Services\Ai\FakeSpeechEvaluator;
 use App\Services\Ai\FakeTextToSpeechSynthesizer;
-use App\Services\Ai\LaravelAiTextToSpeechSynthesizer;
+use App\Services\Ai\NpcTextToSpeechSynthesizer;
 use App\Services\Ai\SpeechEvaluator;
 use Illuminate\Support\ServiceProvider;
 
@@ -37,7 +37,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(TextToSpeechSynthesizer::class, function () {
             return config('services.kalbek.ai_mode') === 'fake'
                 ? new FakeTextToSpeechSynthesizer
-                : new LaravelAiTextToSpeechSynthesizer;
+                : new NpcTextToSpeechSynthesizer;
         });
 
         $this->app->bind(SubscriptionGateway::class, StripeSubscriptionGateway::class);

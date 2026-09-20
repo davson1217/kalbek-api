@@ -89,6 +89,7 @@ class ScenarioController extends Controller
         return $request->validate([
             'language_id' => ['required', 'integer', 'exists:languages,id'],
             'unit_id' => [
+                Rule::requiredIf(fn (): bool => $request->input('status') === ContentStatus::Published->value),
                 'nullable',
                 'integer',
                 Rule::exists('units', 'id')->where(fn ($query) => $query->where('language_id', $request->integer('language_id'))),

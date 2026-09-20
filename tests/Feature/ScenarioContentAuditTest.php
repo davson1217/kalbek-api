@@ -24,6 +24,21 @@ class ScenarioContentAuditTest extends TestCase
             ->assertSuccessful();
     }
 
+    public function test_audit_fails_when_published_scenario_has_no_unit(): void
+    {
+        $this->seed(CharacterSeeder::class);
+        $scenario = Scenario::factory()->create(['slug' => 'orphan-scenario', 'start_scene_slug' => 'start']);
+        $scene = Scene::factory()->for($scenario)->create(['slug' => 'start']);
+        $goal = Goal::factory()->for($scene)->create(['slug' => 'finish']);
+
+        NpcLine::factory()->for($scene)->create(['trigger_goal_id' => null]);
+        NpcLine::factory()->for($scene)->create(['trigger_goal_id' => $goal->id]);
+
+        $this->artisan('kalbek:audit-content --fail')
+            ->expectsOutputToContain('is not assigned to a unit')
+            ->assertFailed();
+    }
+
     public function test_audit_fails_when_goal_replies_hardcode_example_values(): void
     {
         $this->seed(CharacterSeeder::class);

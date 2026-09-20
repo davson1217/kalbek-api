@@ -8,6 +8,7 @@ use App\Models\Goal;
 use App\Models\Language;
 use App\Models\Scenario;
 use App\Models\Scene;
+use App\Models\Unit;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -19,11 +20,33 @@ class EnglishShopScenarioSeeder extends Seeder
         DB::transaction(function (): void {
             $english = Language::query()->where('code', 'en')->firstOrFail();
             $character = Character::query()->where('slug', 'emily')->firstOrFail();
+            $unit = Unit::query()->updateOrCreate(
+                ['slug' => 'shopping-basics'],
+                [
+                    'language_id' => $english->id,
+                    'title' => 'Shopping Basics',
+                    'description' => 'A1 conversations for finding simple items, asking prices, and paying in a shop.',
+                    'cefr_level' => 'a1',
+                    'status' => ContentStatus::Published,
+                    'sort_order' => 10,
+                    'published_at' => now(),
+                ],
+            );
+
+            $unit->translations()->updateOrCreate(
+                ['field' => 'title', 'locale' => 'en'],
+                ['value' => 'Shopping Basics'],
+            );
+            $unit->translations()->updateOrCreate(
+                ['field' => 'description', 'locale' => 'en'],
+                ['value' => 'A1 conversations for finding simple items, asking prices, and paying in a shop.'],
+            );
 
             $scenario = Scenario::query()->updateOrCreate(
                 ['slug' => 'at-the-shop'],
                 [
                     'language_id' => $english->id,
+                    'unit_id' => $unit->id,
                     'character_id' => $character->id,
                     'title' => 'At the shop',
                     'subtitle' => 'Ask for simple items',

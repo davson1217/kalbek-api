@@ -38,6 +38,8 @@ class ScenarioApiTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertHeader('Deprecation', 'true')
+            ->assertHeader('Link', '</api/v1/units>; rel="successor-version"')
             ->assertJsonPath('data.0.id', 'restoranas')
             ->assertJsonPath('data.0.title', 'Restorane')
             ->assertJsonPath('data.0.unit.id', 'susipazinkime')

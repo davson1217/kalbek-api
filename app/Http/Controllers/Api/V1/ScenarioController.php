@@ -9,12 +9,12 @@ use App\Models\Scenario;
 use App\Models\User;
 use App\Modules\Subscriptions\SubscriptionManager;
 use App\Services\Content\ScenarioPayloadBuilder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 class ScenarioController extends Controller
 {
-    public function index(Request $request, ScenarioPayloadBuilder $payloadBuilder, SubscriptionManager $subscriptions): AnonymousResourceCollection
+    public function index(Request $request, ScenarioPayloadBuilder $payloadBuilder, SubscriptionManager $subscriptions): JsonResponse
     {
         $languageCode = $request->string('language')->trim()->lower()->value() ?: null;
         $scenarios = $payloadBuilder->publishedSummaries($languageCode);
@@ -31,7 +31,11 @@ class ScenarioController extends Controller
             });
         }
 
-        return ScenarioSummaryResource::collection($scenarios);
+        return ScenarioSummaryResource::collection($scenarios)
+            ->response()
+            ->header('Deprecation', 'true')
+            ->header('Link', '</api/v1/units>; rel="successor-version"')
+            ->header('X-Kalbek-Deprecated', 'Use GET /api/v1/units for learner course journeys. GET /api/v1/scenarios/{scenario} remains supported for detail.');
     }
 
     public function show(Scenario $scenario, Request $request, ScenarioPayloadBuilder $payloadBuilder, SubscriptionManager $subscriptions): ScenarioResource

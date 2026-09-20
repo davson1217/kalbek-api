@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Ai\Audio;
 
-class LaravelAiTextToSpeechSynthesizer implements TextToSpeechSynthesizer
+class NpcTextToSpeechSynthesizer implements TextToSpeechSynthesizer
 {
     /**
      * @var array{disk: string, path: string, exception?: class-string, message: string}|null

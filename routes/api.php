@@ -28,49 +28,64 @@ Route::prefix('v1')->name('api.v1.')->group(function (): void {
     Route::middleware('auth:sanctum')->get('/user', fn (Request $request) => $request->user())
         ->name('user');
 
-    Route::post('/auth/register', [AuthController::class, 'register'])
-        ->name('auth.register');
-    Route::post('/auth/login', [AuthController::class, 'login'])
-        ->name('auth.login');
-    Route::post('/auth/forgot-password', [PasswordResetController::class, 'forgot'])
-        ->name('auth.password.forgot');
-    Route::post('/auth/reset-password', [PasswordResetController::class, 'reset'])
-        ->name('auth.password.reset');
-    Route::post('/auth/oauth/exchange', OAuthExchangeController::class)
-        ->name('auth.oauth.exchange');
+    Route::prefix('auth')->group(function (): void {
+        Route::post('register', [AuthController::class, 'register'])
+            ->name('auth.register');
+        Route::post('login', [AuthController::class, 'login'])
+            ->name('auth.login');
+        Route::post('forgot-password', [PasswordResetController::class, 'forgot'])
+            ->name('auth.password.forgot');
+        Route::post('reset-password', [PasswordResetController::class, 'reset'])
+            ->name('auth.password.reset');
+        Route::post('oauth/exchange', OAuthExchangeController::class)
+            ->name('auth.oauth.exchange');
+    });
 
     Route::apiResource('scenarios', ScenarioController::class)
         ->only(['index', 'show']);
+
     Route::get('/languages', [LanguageController::class, 'index'])
         ->name('languages.index');
+
     Route::get('/units', [UnitController::class, 'index'])
         ->name('units.index');
-    Route::get('/tts', TextToSpeechController::class)
-        ->name('tts');
+
     Route::post('/stripe/webhook', StripeWebhookController::class)
         ->name('stripe.webhook');
+
+    Route::get('/tts', TextToSpeechController::class)
+        ->name('tts');
 
     Route::middleware('auth:sanctum')->group(function (): void {
         Route::get('/auth/user', [AuthController::class, 'me'])
             ->name('auth.user');
         Route::post('/auth/logout', [AuthController::class, 'logout'])
             ->name('auth.logout');
-        Route::get('/profile', [ProfileController::class, 'show'])
-            ->name('profile.show');
-        Route::patch('/profile', [ProfileController::class, 'update'])
-            ->name('profile.update');
+
+        Route::prefix('profile')->group(function (): void {
+            Route::get('/', [ProfileController::class, 'show'])
+                ->name('profile.show');
+            Route::patch('/', [ProfileController::class, 'update'])
+                ->name('profile.update');
+        });
+
+        Route::prefix('subscription')->group(function (): void {
+            Route::get('/', SubscriptionStatusController::class)
+                ->name('subscriptions.show');
+            Route::get('/plans', SubscriptionPlansController::class)
+                ->name('subscriptions.plans');
+            Route::post('/checkout', SubscriptionCheckoutController::class)
+                ->name('subscriptions.checkout');
+            Route::post('/portal', BillingPortalController::class)
+                ->name('subscriptions.portal');
+        });
+
         Route::get('/lesson-progress', [LessonProgressController::class, 'index'])
             ->name('lesson-progress.index');
-        Route::get('/subscription', SubscriptionStatusController::class)
-            ->name('subscription.show');
-        Route::get('/subscription/plans', SubscriptionPlansController::class)
-            ->name('subscription.plans');
-        Route::post('/subscription/checkout', SubscriptionCheckoutController::class)
-            ->name('subscription.checkout');
-        Route::post('/subscription/portal', BillingPortalController::class)
-            ->name('subscription.portal');
+
         Route::post('/lessons/{scenario}/complete', LessonCompletionController::class)
             ->name('lessons.complete');
+
         Route::post('/speak-check', SpeechCheckController::class)
             ->name('speak-check');
     });

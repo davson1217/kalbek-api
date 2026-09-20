@@ -8,6 +8,7 @@ use App\Models\Goal;
 use App\Models\Language;
 use App\Models\Scenario;
 use App\Models\Scene;
+use App\Models\Unit;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -19,11 +20,41 @@ class PharmacyVisitScenarioSeeder extends Seeder
         DB::transaction(function (): void {
             $lithuanian = Language::query()->where('code', 'lt')->firstOrFail();
             $character = Character::query()->where('slug', 'rasa')->firstOrFail();
+            $unit = Unit::query()->updateOrCreate(
+                ['slug' => 'sveikata'],
+                [
+                    'language_id' => $lithuanian->id,
+                    'title' => 'Sveikata',
+                    'description' => 'A1 conversations for simple health needs, symptoms, medicine, and pharmacy visits.',
+                    'cefr_level' => 'a1',
+                    'status' => ContentStatus::Published,
+                    'sort_order' => 40,
+                    'published_at' => now(),
+                ],
+            );
+
+            $unit->translations()->updateOrCreate(
+                ['field' => 'title', 'locale' => 'en'],
+                ['value' => 'Health'],
+            );
+            $unit->translations()->updateOrCreate(
+                ['field' => 'title', 'locale' => 'lt'],
+                ['value' => 'Sveikata'],
+            );
+            $unit->translations()->updateOrCreate(
+                ['field' => 'description', 'locale' => 'en'],
+                ['value' => 'A1 conversations for simple health needs, symptoms, medicine, and pharmacy visits.'],
+            );
+            $unit->translations()->updateOrCreate(
+                ['field' => 'description', 'locale' => 'lt'],
+                ['value' => 'A1 pokalbiai apie paprastus sveikatos poreikius, simptomus, vaistus ir apsilankymą vaistinėje.'],
+            );
 
             $scenario = Scenario::query()->updateOrCreate(
                 ['slug' => 'pharmacy-visit'],
                 [
                     'language_id' => $lithuanian->id,
+                    'unit_id' => $unit->id,
                     'character_id' => $character->id,
                     'title' => 'Vaistinėje',
                     'subtitle' => 'At the pharmacy',

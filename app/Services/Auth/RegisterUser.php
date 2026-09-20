@@ -22,7 +22,7 @@ class RegisterUser
             $character = Character::query()->where('slug', 'gabija')->first();
 
             $user->profile()->create([
-                'avatar_character_id' => $character?->id,
+                'avatar_character_id' => $character?->id, // confirm importance. should probably be dropped
                 'display_name' => $data['name'],
             ]);
 

@@ -21,7 +21,7 @@ class AuditScenarioContent
         $issues = [];
 
         $query = Scenario::query()
-            ->with(['language', 'scenes.goals.nextScene', 'scenes.goals.responseLines', 'scenes.npcLines.triggerGoal'])
+            ->with(['language', 'unit', 'scenes.goals.nextScene', 'scenes.goals.responseLines', 'scenes.npcLines.triggerGoal'])
             ->orderBy('sort_order');
 
         if ($onlyScenario) {
@@ -54,6 +54,17 @@ class AuditScenarioContent
     {
         $issues = [];
         $sceneSlugs = $scenario->scenes->pluck('slug')->all();
+
+        if (! $scenario->unit_id) {
+            $issues[] = $this->issue(
+                'critical',
+                'relationship',
+                'scenario',
+                $scenario,
+                "Published scenario [{$scenario->slug}] is not assigned to a unit.",
+                'Assign every published learner-facing scenario to a unit. Units are the source of truth for the course journey.',
+            );
+        }
 
         if (! $scenario->start_scene_slug || ! in_array($scenario->start_scene_slug, $sceneSlugs, true)) {
             $issues[] = $this->issue(

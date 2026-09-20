@@ -8,6 +8,7 @@ use App\Models\Goal;
 use App\Models\Language;
 use App\Models\Scenario;
 use App\Models\Scene;
+use App\Models\Unit;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +19,35 @@ class A1ScenarioSeeder extends Seeder
     {
         DB::transaction(function (): void {
             $lithuanian = Language::query()->where('code', 'lt')->firstOrFail();
+            $unit = Unit::query()->updateOrCreate(
+                ['slug' => 'a1-practice-library'],
+                [
+                    'language_id' => $lithuanian->id,
+                    'title' => 'A1 praktika',
+                    'description' => 'Additional A1 speaking scenarios for everyday beginner situations.',
+                    'cefr_level' => 'a1',
+                    'status' => ContentStatus::Published,
+                    'sort_order' => 90,
+                    'published_at' => now(),
+                ],
+            );
+
+            $unit->translations()->updateOrCreate(
+                ['field' => 'title', 'locale' => 'en'],
+                ['value' => 'A1 Practice'],
+            );
+            $unit->translations()->updateOrCreate(
+                ['field' => 'title', 'locale' => 'lt'],
+                ['value' => 'A1 praktika'],
+            );
+            $unit->translations()->updateOrCreate(
+                ['field' => 'description', 'locale' => 'en'],
+                ['value' => 'Additional A1 speaking scenarios for everyday beginner situations.'],
+            );
+            $unit->translations()->updateOrCreate(
+                ['field' => 'description', 'locale' => 'lt'],
+                ['value' => 'Papildomi A1 kalbėjimo scenarijai kasdienėms pradedančiųjų situacijoms.'],
+            );
 
             foreach ($this->scenarios() as $scenarioData) {
                 $character = Character::query()->where('slug', $scenarioData['character'])->firstOrFail();
@@ -26,6 +56,7 @@ class A1ScenarioSeeder extends Seeder
                     ['slug' => $scenarioData['slug']],
                     [
                         'language_id' => $lithuanian->id,
+                        'unit_id' => $unit->id,
                         'character_id' => $character->id,
                         'title' => $scenarioData['title'],
                         'subtitle' => $scenarioData['subtitle'],

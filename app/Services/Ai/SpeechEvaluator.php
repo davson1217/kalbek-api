@@ -71,12 +71,19 @@ class SpeechEvaluator implements SpeechEvaluatorContract
             ];
         }
 
+        /**
+         * An interpretation layer is drafted in to consolidate a transcription since Lithuanian transcription
+         * with the available models may be somewhat inaccurate.
+         *
+         * It uses the accepted phrases array to calculate a Levenshtein distance. The closest string in the array is used.
+        */
         $interpretation = (new SpeechInterpretation)->interpret(
             $transcript,
             $example,
             $acceptedPhrases,
             $feedbackLanguageCode,
         );
+
         $normalizedTranscript = $interpretation['transcript'];
         $contentCefrLevel = $this->validCefrLevel($contentCefrLevel, CefrLevel::A1->value);
         $learnerCefrLevel = $this->validCefrLevel($learnerCefrLevel, CefrLevel::PreA1->value);
