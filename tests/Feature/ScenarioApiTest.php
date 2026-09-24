@@ -2,17 +2,32 @@
 
 namespace Tests\Feature;
 
+use App\ContentStatus;
 use App\Models\Scenario;
 use App\Models\Unit;
+use Database\Seeders\A1ReviewCapstoneUnitSeeder;
 use Database\Seeders\A1ScenarioSeeder;
 use Database\Seeders\CharacterSeeder;
 use Database\Seeders\EnglishShopScenarioSeeder;
+use Database\Seeders\GebejimaiPoreikiaiUnitSeeder;
+use Database\Seeders\KelioneApgyvendinimasUnitSeeder;
+use Database\Seeders\KlasejeMokantisUnitSeeder;
 use Database\Seeders\KurVietosIrKryptysUnitSeeder;
+use Database\Seeders\LaisvalaikisPomegiaiUnitSeeder;
 use Database\Seeders\MaistasIrGerimaiUnitSeeder;
+use Database\Seeders\ManoDienaUnitSeeder;
+use Database\Seeders\NamaiDaiktaiUnitSeeder;
+use Database\Seeders\OrasDrabuziaiUnitSeeder;
+use Database\Seeders\ParduotuvejeUnitSeeder;
 use Database\Seeders\PharmacyVisitScenarioSeeder;
+use Database\Seeders\PlanaiKvietimaiUnitSeeder;
 use Database\Seeders\RestaurantScenarioSeeder;
 use Database\Seeders\SeimaIrZmonesUnitSeeder;
+use Database\Seeders\SkaiciaiLaikasDatosUnitSeeder;
 use Database\Seeders\SusipazinkimeUnitSeeder;
+use Database\Seeders\SveikataVaistineUnitSeeder;
+use Database\Seeders\TransportasKelioneMiesteUnitSeeder;
+use Database\Seeders\UnitsSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -196,6 +211,373 @@ class ScenarioApiTest extends TestCase
             ->assertJsonFragment(['trigger_goal_id' => 'introduce-person']);
     }
 
+    public function test_skaiciai_laikas_ir_datos_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, SkaiciaiLaikasDatosUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'skaiciai-laikas-ir-datos')
+            ->assertJsonPath('data.0.title', 'Numbers, Time and Dates')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'skaiciai-iki-desimt')
+            ->assertJsonPath('data.0.scenarios.1.id', 'mano-amzius')
+            ->assertJsonPath('data.0.scenarios.2.id', 'telefono-numeris')
+            ->assertJsonPath('data.0.scenarios.3.id', 'kiek-valandu')
+            ->assertJsonPath('data.0.scenarios.4.id', 'siandien-ar-rytoj')
+            ->assertJsonPath('data.0.scenarios.5.id', 'susitikimo-laikas');
+
+        $this->getJson('/api/v1/scenarios/susitikimo-laikas?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'skaiciai-laikas-ir-datos')
+            ->assertJsonPath('data.note.title', 'Before: Meeting Time')
+            ->assertJsonPath('data.start_scene_id', 'dienos-pasirinkimas')
+            ->assertJsonFragment(['id' => 'choose-meeting-day', 'next' => 'valandos-pasirinkimas'])
+            ->assertJsonFragment(['id' => 'choose-meeting-time', 'next' => 'patvirtinimas'])
+            ->assertJsonFragment(['example' => 'Trečią valandą.'])
+            ->assertJsonFragment(['trigger_goal_id' => 'confirm-meeting']);
+    }
+
+    public function test_parduotuveje_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, ParduotuvejeUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'parduotuveje')
+            ->assertJsonPath('data.0.title', 'At the Shop')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'duonos-ir-pieno')
+            ->assertJsonPath('data.0.scenarios.1.id', 'man-reikia')
+            ->assertJsonPath('data.0.scenarios.2.id', 'vienas-ar-du')
+            ->assertJsonPath('data.0.scenarios.3.id', 'kaina-parduotuveje')
+            ->assertJsonPath('data.0.scenarios.4.id', 'prie-kasos')
+            ->assertJsonPath('data.0.scenarios.5.id', 'apsipirkimas-parduotuveje');
+
+        $this->getJson('/api/v1/scenarios/apsipirkimas-parduotuveje?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'parduotuveje')
+            ->assertJsonPath('data.note.title', 'Before: Shopping at the Store')
+            ->assertJsonPath('data.start_scene_id', 'prekiu-prasymas')
+            ->assertJsonFragment(['id' => 'capstone-ask-item', 'next' => 'kiekio-pasirinkimas'])
+            ->assertJsonFragment(['id' => 'capstone-quantity', 'next' => 'kaina-ir-mokejimas'])
+            ->assertJsonFragment(['example' => 'Mokėsiu kortele.'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-pay']);
+    }
+
+    public function test_mano_diena_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, ManoDienaUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'mano-diena')
+            ->assertJsonPath('data.0.title', 'My Day')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'ryte')
+            ->assertJsonPath('data.0.scenarios.1.id', 'kada-keliates')
+            ->assertJsonPath('data.0.scenarios.2.id', 'kur-einate')
+            ->assertJsonPath('data.0.scenarios.3.id', 'ka-veikiate')
+            ->assertJsonPath('data.0.scenarios.4.id', 'vakare')
+            ->assertJsonPath('data.0.scenarios.5.id', 'mano-dienos-pasakojimas');
+
+        $this->getJson('/api/v1/scenarios/mano-dienos-pasakojimas?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'mano-diena')
+            ->assertJsonPath('data.note.title', 'Before: Talking About My Day')
+            ->assertJsonPath('data.start_scene_id', 'rytas')
+            ->assertJsonFragment(['id' => 'capstone-morning', 'next' => 'diena'])
+            ->assertJsonFragment(['id' => 'capstone-day', 'next' => 'vakaras'])
+            ->assertJsonFragment(['example' => 'Vakare ilsiuosi.'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-evening']);
+    }
+
+    public function test_namai_ir_daiktai_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, NamaiDaiktaiUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'namai-ir-daiktai')
+            ->assertJsonPath('data.0.title', 'Home and Objects')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'kambariai')
+            ->assertJsonPath('data.0.scenarios.1.id', 'kur-yra-daiktas')
+            ->assertJsonPath('data.0.scenarios.2.id', 'ka-turite')
+            ->assertJsonPath('data.0.scenarios.3.id', 'mano-kambarys')
+            ->assertJsonPath('data.0.scenarios.4.id', 'prasau-daikto')
+            ->assertJsonPath('data.0.scenarios.5.id', 'namu-pokalbis');
+
+        $this->getJson('/api/v1/scenarios/namu-pokalbis?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'namai-ir-daiktai')
+            ->assertJsonPath('data.note.title', 'Before: Home Conversation')
+            ->assertJsonPath('data.start_scene_id', 'kambarys')
+            ->assertJsonFragment(['id' => 'capstone-room', 'next' => 'daikto-vieta'])
+            ->assertJsonFragment(['id' => 'capstone-object-location', 'next' => 'prasymas'])
+            ->assertJsonFragment(['example' => 'Prašau telefono.'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-object-request']);
+    }
+
+    public function test_transportas_ir_kelione_mieste_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, TransportasKelioneMiesteUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'transportas-ir-kelione-mieste')
+            ->assertJsonPath('data.0.title', 'Transport and City Travel')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'bilietas')
+            ->assertJsonPath('data.0.scenarios.1.id', 'kur-vaziuojate')
+            ->assertJsonPath('data.0.scenarios.2.id', 'kuris-autobusas')
+            ->assertJsonPath('data.0.scenarios.3.id', 'kada-isvyksta')
+            ->assertJsonPath('data.0.scenarios.4.id', 'taksi')
+            ->assertJsonPath('data.0.scenarios.5.id', 'kelione-mieste');
+
+        $this->getJson('/api/v1/scenarios/kelione-mieste?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'transportas-ir-kelione-mieste')
+            ->assertJsonPath('data.note.title', 'Before: City Travel')
+            ->assertJsonPath('data.start_scene_id', 'tikslas')
+            ->assertJsonFragment(['id' => 'capstone-destination', 'next' => 'bilietas'])
+            ->assertJsonFragment(['id' => 'capstone-ticket', 'next' => 'laikas'])
+            ->assertJsonFragment(['example' => 'Kada išvyksta autobusas?'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-time']);
+    }
+
+    public function test_oras_ir_drabuziai_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, OrasDrabuziaiUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'oras-ir-drabuziai')
+            ->assertJsonPath('data.0.title', 'Weather and Clothes')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'koks-oras')
+            ->assertJsonPath('data.0.scenarios.1.id', 'silta-ar-salta')
+            ->assertJsonPath('data.0.scenarios.2.id', 'ka-apsirengti')
+            ->assertJsonPath('data.0.scenarios.3.id', 'man-reikia-drabuzio')
+            ->assertJsonPath('data.0.scenarios.4.id', 'spalva-ir-dydis')
+            ->assertJsonPath('data.0.scenarios.5.id', 'oras-ir-apranga');
+
+        $this->getJson('/api/v1/scenarios/oras-ir-apranga?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'oras-ir-drabuziai')
+            ->assertJsonPath('data.note.title', 'Before: Weather and Outfit')
+            ->assertJsonPath('data.start_scene_id', 'oras')
+            ->assertJsonFragment(['id' => 'capstone-weather', 'next' => 'drabuzis'])
+            ->assertJsonFragment(['id' => 'capstone-clothing-need', 'next' => 'pasirinkimas'])
+            ->assertJsonFragment(['example' => 'Noriu mėlynos striukės.'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-color-size']);
+    }
+
+    public function test_sveikata_ir_vaistine_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, SveikataVaistineUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'sveikata-ir-vaistine')
+            ->assertJsonPath('data.0.title', 'Health and Pharmacy')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'kaip-jauciates')
+            ->assertJsonPath('data.0.scenarios.1.id', 'ka-skauda')
+            ->assertJsonPath('data.0.scenarios.2.id', 'vaisto-prasymas')
+            ->assertJsonPath('data.0.scenarios.3.id', 'kaip-vartoti')
+            ->assertJsonPath('data.0.scenarios.4.id', 'mokejimas-vaistineje')
+            ->assertJsonPath('data.0.scenarios.5.id', 'vaistineje-pokalbis');
+
+        $this->getJson('/api/v1/scenarios/vaistineje-pokalbis?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'sveikata-ir-vaistine')
+            ->assertJsonPath('data.note.title', 'Before: Pharmacy Conversation')
+            ->assertJsonPath('data.start_scene_id', 'problema')
+            ->assertJsonFragment(['id' => 'capstone-health-problem', 'next' => 'vaistas'])
+            ->assertJsonFragment(['id' => 'capstone-ask-medicine', 'next' => 'vartojimas'])
+            ->assertJsonFragment(['example' => 'Kaip vartoti šį vaistą?'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-use-or-pay']);
+    }
+
+    public function test_klaseje_ir_mokantis_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, KlasejeMokantisUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'klaseje-ir-mokantis')
+            ->assertJsonPath('data.0.title', 'In Class and Learning')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'pamokoje')
+            ->assertJsonPath('data.0.scenarios.1.id', 'as-nesuprantu')
+            ->assertJsonPath('data.0.scenarios.2.id', 'pakartokite-prasau')
+            ->assertJsonPath('data.0.scenarios.3.id', 'ka-reiskia')
+            ->assertJsonPath('data.0.scenarios.4.id', 'ar-galite-padeti')
+            ->assertJsonPath('data.0.scenarios.5.id', 'mokymosi-pokalbis');
+
+        $this->getJson('/api/v1/scenarios/mokymosi-pokalbis?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'klaseje-ir-mokantis')
+            ->assertJsonPath('data.note.title', 'Before: Learning Conversation')
+            ->assertJsonPath('data.start_scene_id', 'supratimas')
+            ->assertJsonFragment(['id' => 'capstone-not-understand', 'next' => 'pakartojimas'])
+            ->assertJsonFragment(['id' => 'capstone-repeat', 'next' => 'reiksme'])
+            ->assertJsonFragment(['example' => 'Ką reiškia šis žodis?'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-meaning']);
+    }
+
+    public function test_laisvalaikis_ir_pomegiai_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, LaisvalaikisPomegiaiUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'laisvalaikis-ir-pomegiai')
+            ->assertJsonPath('data.0.title', 'Free Time and Hobbies')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'ka-veikiate-laisvalaikiu')
+            ->assertJsonPath('data.0.scenarios.1.id', 'man-patinka')
+            ->assertJsonPath('data.0.scenarios.2.id', 'man-nepatinka')
+            ->assertJsonPath('data.0.scenarios.3.id', 'sportas-ar-muzika')
+            ->assertJsonPath('data.0.scenarios.4.id', 'kada-turite-laiko')
+            ->assertJsonPath('data.0.scenarios.5.id', 'laisvalaikio-pokalbis');
+
+        $this->getJson('/api/v1/scenarios/laisvalaikio-pokalbis?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'laisvalaikis-ir-pomegiai')
+            ->assertJsonPath('data.note.title', 'Before: Free-Time Conversation')
+            ->assertJsonPath('data.start_scene_id', 'veikla')
+            ->assertJsonFragment(['id' => 'capstone-free-time-activity', 'next' => 'patinka'])
+            ->assertJsonFragment(['id' => 'capstone-like', 'next' => 'laikas'])
+            ->assertJsonFragment(['example' => 'Turiu laiko vakare.'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-free-time']);
+    }
+
+    public function test_planai_ir_kvietimai_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, PlanaiKvietimaiUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'planai-ir-kvietimai')
+            ->assertJsonPath('data.0.title', 'Plans and Invitations')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'ar-nori-eiti')
+            ->assertJsonPath('data.0.scenarios.1.id', 'taip-arba-ne')
+            ->assertJsonPath('data.0.scenarios.2.id', 'kada-susitinkame')
+            ->assertJsonPath('data.0.scenarios.3.id', 'kur-susitinkame')
+            ->assertJsonPath('data.0.scenarios.4.id', 'atsiprasau-negaliu')
+            ->assertJsonPath('data.0.scenarios.5.id', 'susitikimo-planas');
+
+        $this->getJson('/api/v1/scenarios/susitikimo-planas?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'planai-ir-kvietimai')
+            ->assertJsonPath('data.note.title', 'Before: Meeting Plan')
+            ->assertJsonPath('data.start_scene_id', 'kvietimas')
+            ->assertJsonFragment(['id' => 'capstone-invite', 'next' => 'atsakymas'])
+            ->assertJsonFragment(['id' => 'capstone-answer', 'next' => 'laikas'])
+            ->assertJsonFragment(['id' => 'capstone-meeting-time', 'next' => 'vieta'])
+            ->assertJsonFragment(['example' => 'Susitinkame prie kavinės.'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-meeting-place']);
+    }
+
+    public function test_gebejimai_ir_poreikiai_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, GebejimaiPoreikiaiUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'gebejimai-ir-poreikiai')
+            ->assertJsonPath('data.0.title', 'Abilities and Needs')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'as-galiu')
+            ->assertJsonPath('data.0.scenarios.1.id', 'as-negaliu')
+            ->assertJsonPath('data.0.scenarios.2.id', 'as-noriu')
+            ->assertJsonPath('data.0.scenarios.3.id', 'man-reikia')
+            ->assertJsonPath('data.0.scenarios.4.id', 'as-turiu')
+            ->assertJsonPath('data.0.scenarios.5.id', 'poreikio-pokalbis');
+
+        $this->getJson('/api/v1/scenarios/poreikio-pokalbis?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'gebejimai-ir-poreikiai')
+            ->assertJsonPath('data.note.title', 'Before: Needs Conversation')
+            ->assertJsonPath('data.start_scene_id', 'poreikis')
+            ->assertJsonFragment(['id' => 'capstone-need', 'next' => 'gebejimas'])
+            ->assertJsonFragment(['id' => 'capstone-can', 'next' => 'ribojimas'])
+            ->assertJsonFragment(['example' => 'Aš negaliu ateiti šiandien.'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-limitation']);
+    }
+
+    public function test_kelione_ir_apgyvendinimas_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, KelioneApgyvendinimasUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'kelione-ir-apgyvendinimas')
+            ->assertJsonPath('data.0.title', 'Travel and Accommodation')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'viesbutyje-registracija')
+            ->assertJsonPath('data.0.scenarios.1.id', 'vardas-registracijai')
+            ->assertJsonPath('data.0.scenarios.2.id', 'kambarys')
+            ->assertJsonPath('data.0.scenarios.3.id', 'raktas-ir-numeris')
+            ->assertJsonPath('data.0.scenarios.4.id', 'problema-kambaryje')
+            ->assertJsonPath('data.0.scenarios.5.id', 'atvykimas-i-viesbuti');
+
+        $this->getJson('/api/v1/scenarios/atvykimas-i-viesbuti?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'kelione-ir-apgyvendinimas')
+            ->assertJsonPath('data.note.title', 'Before: Hotel Arrival')
+            ->assertJsonPath('data.start_scene_id', 'registracija')
+            ->assertJsonFragment(['id' => 'capstone-reservation', 'next' => 'vardas'])
+            ->assertJsonFragment(['id' => 'capstone-checkin-name', 'next' => 'kambarys'])
+            ->assertJsonFragment(['id' => 'capstone-room', 'next' => 'raktas'])
+            ->assertJsonFragment(['example' => 'Koks mano kambario numeris?'])
+            ->assertJsonFragment(['trigger_goal_id' => 'capstone-key-number']);
+    }
+
+    public function test_a1_review_capstone_unit_seeded_content_is_listed_in_learning_order(): void
+    {
+        $this->seed([CharacterSeeder::class, A1ReviewCapstoneUnitSeeder::class]);
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.id', 'a1-kartojimas')
+            ->assertJsonPath('data.0.title', 'A1 Review')
+            ->assertJsonPath('data.0.scenarios_count', 6)
+            ->assertJsonPath('data.0.scenarios.0.id', 'a1-apie-save')
+            ->assertJsonPath('data.0.scenarios.1.id', 'a1-kasdieniai-poreikiai')
+            ->assertJsonPath('data.0.scenarios.2.id', 'a1-mieste')
+            ->assertJsonPath('data.0.scenarios.3.id', 'a1-paslaugos')
+            ->assertJsonPath('data.0.scenarios.4.id', 'a1-planai-ir-laikas')
+            ->assertJsonPath('data.0.scenarios.5.id', 'a1-baigiamasis-pokalbis');
+
+        $this->getJson('/api/v1/scenarios/a1-baigiamasis-pokalbis?app_language=en')
+            ->assertOk()
+            ->assertJsonPath('data.unit.id', 'a1-kartojimas')
+            ->assertJsonPath('data.note.title', 'Before: Final A1 Conversation')
+            ->assertJsonPath('data.start_scene_id', 'pradzia')
+            ->assertJsonFragment(['id' => 'final-introduction', 'next' => 'miestas'])
+            ->assertJsonFragment(['id' => 'final-city-help', 'next' => 'paslauga'])
+            ->assertJsonFragment(['id' => 'final-service-request', 'next' => 'planas'])
+            ->assertJsonFragment(['id' => 'final-plan', 'next' => 'pabaiga'])
+            ->assertJsonFragment(['example' => 'Ačiū, viso gero.'])
+            ->assertJsonFragment(['trigger_goal_id' => 'final-goodbye']);
+    }
 
     public function test_active_languages_are_listed_for_the_learner_api(): void
     {
@@ -412,6 +794,47 @@ class ScenarioApiTest extends TestCase
         $this->getJson('/api/v1/scenarios/at-the-shop')
             ->assertOk()
             ->assertJsonPath('data.note.title', 'Before you shop for simple items');
+    }
+
+    public function test_current_seed_chain_archives_legacy_and_non_unit_content(): void
+    {
+        $this->seed([
+            CharacterSeeder::class,
+            A1ScenarioSeeder::class,
+            RestaurantScenarioSeeder::class,
+            PharmacyVisitScenarioSeeder::class,
+            UnitsSeeder::class,
+        ]);
+
+        $this->assertDatabaseHas('units', [
+            'slug' => 'a1-practice-library',
+            'status' => ContentStatus::Archived->value,
+        ]);
+        $this->assertDatabaseHas('units', [
+            'slug' => 'sveikata',
+            'status' => ContentStatus::Archived->value,
+        ]);
+        $this->assertDatabaseHas('scenarios', [
+            'slug' => 'viesbutyje',
+            'status' => ContentStatus::Archived->value,
+        ]);
+        $this->assertDatabaseHas('scenarios', [
+            'slug' => 'pharmacy-visit',
+            'status' => ContentStatus::Archived->value,
+        ]);
+        $this->assertSame(0, Scenario::query()->published()->whereNull('unit_id')->count());
+
+        $this->getJson('/api/v1/units?language=lt&app_language=en')
+            ->assertOk()
+            ->assertJsonMissing(['id' => 'a1-practice-library'])
+            ->assertJsonMissing(['id' => 'viesbutyje'])
+            ->assertJsonMissing(['id' => 'sveikata'])
+            ->assertJsonFragment(['id' => 'susipazinkime'])
+            ->assertJsonFragment(['id' => 'maistas-ir-gerimai'])
+            ->assertJsonFragment(['id' => 'parduotuveje']);
+
+        $this->getJson('/api/v1/scenarios/viesbutyje')
+            ->assertNotFound();
     }
 
     public function test_draft_scenarios_return_404_from_the_learner_api(): void

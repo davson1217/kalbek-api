@@ -11,10 +11,13 @@ This document covers TTS and generated audio storage. For speech-to-text, learne
    - `language`: the target language code, for example `lt`.
 2. `App\Http\Controllers\Api\V1\TextToSpeechController` validates the request through `TextToSpeechRequest`.
 3. Laravel resolves the language from the `languages.code` column.
-4. `LaravelAiTextToSpeechSynthesizer` builds a deterministic cache key from:
+4. `App\Services\Ai\NpcTextToSpeechSynthesizer` builds a deterministic cache key from:
+   - configured audio provider from `KALBEK_AI_FOR_AUDIO`
    - `languageCode`
    - configured TTS model from `KALBEK_TTS_MODEL`
+   - prompt contract version from `KALBEK_TTS_PROMPT_VERSION`
    - voice, either `languages.default_voice` or `default-female`
+   - character speaking style, when configured
    - exact text
 5. Redis/Laravel cache is checked for metadata under:
    - `tts:generated-audio:{cacheKey}`
@@ -28,6 +31,8 @@ This document covers TTS and generated audio storage. For speech-to-text, learne
 12. The response includes long-lived browser cache headers:
    - `Cache-Control: public, max-age=31536000, immutable`
    - `Accept-Ranges: bytes`
+
+The frontend should include `VITE_KALBEK_TTS_ASSET_VERSION` as a `v` query parameter on TTS URLs. Laravel ignores this value for synthesis, but browsers and CDNs treat it as a new URL, which prevents old immutable audio from being reused after the TTS prompt contract changes.
 
 ## Redis Role
 
@@ -46,6 +51,7 @@ Relevant environment values:
 - `QUEUE_CONNECTION=redis`
 - `REDIS_HOST=redis`
 - `KALBEK_TTS_METADATA_CACHE_TTL_SECONDS=86400`
+- `KALBEK_TTS_PROMPT_VERSION=verbatim-v1`
 - `KALBEK_TTS_GENERATION_LOCK_SECONDS=60`
 - `KALBEK_TTS_GENERATION_LOCK_WAIT_SECONDS=50`
 - `KALBEK_GENERATED_AUDIO_DISK=local`
@@ -73,6 +79,8 @@ Important `generated_audio` columns:
 - `bytes`: stored audio size.
 - `last_used_at`: updated when cached audio is served.
 
+The TTS prompt contract tells the provider to read the supplied text exactly as written. This matters for Lithuanian learning lines such as `Pasakykite, koks oras.` because some generative TTS models may otherwise interpret `Pasakykite` (`Say`) as an instruction and speak only the rest of the sentence. When the prompt contract changes, increment `KALBEK_TTS_PROMPT_VERSION` so existing generated audio is not reused for the new behavior.
+
 Default local development values:
 
 ```env
@@ -80,6 +88,7 @@ KALBEK_GENERATED_AUDIO_DISK=local
 KALBEK_GENERATED_AUDIO_PATH=generated-audio
 KALBEK_GENERATED_AUDIO_FALLBACK_DISK=local
 KALBEK_GENERATED_AUDIO_ALLOW_FALLBACK=false
+KALBEK_TTS_PROMPT_VERSION=verbatim-v1
 ```
 
 With those defaults, files are written to Laravel's `local` disk under `storage/app/private/generated-audio`.

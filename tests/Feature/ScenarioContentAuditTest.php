@@ -7,7 +7,7 @@ use App\Models\NpcLine;
 use App\Models\Scenario;
 use App\Models\Scene;
 use Database\Seeders\CharacterSeeder;
-use Database\Seeders\ScenarioSeeder;
+use Database\Seeders\UnitsSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
 
@@ -17,7 +17,7 @@ class ScenarioContentAuditTest extends TestCase
 
     public function test_seeded_scenario_content_passes_the_audit(): void
     {
-        $this->seed([CharacterSeeder::class, ScenarioSeeder::class]);
+        $this->seed([CharacterSeeder::class, UnitsSeeder::class]);
 
         $this->artisan('kalbek:audit-content --fail')
             ->expectsOutput('Scenario content audit passed.')

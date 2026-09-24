@@ -15,6 +15,7 @@ use App\Models\SpeakingAttempt;
 use App\Models\User;
 use Database\Seeders\A1ScenarioSeeder;
 use Database\Seeders\CharacterSeeder;
+use Database\Seeders\OrasDrabuziaiUnitSeeder;
 use Database\Seeders\RestaurantScenarioSeeder;
 use Database\Seeders\SusipazinkimeUnitSeeder;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
@@ -57,6 +58,24 @@ class AiSpeechApiTest extends TestCase
         $second
             ->assertOk()
             ->assertContent('fake-audio-content');
+    }
+
+    public function test_text_to_speech_uses_verbatim_instructions_for_instruction_like_lithuanian_lines(): void
+    {
+        Cache::flush();
+        Storage::fake('local');
+        Audio::fake([base64_encode('weather-audio')]);
+
+        $this->getJson('/api/v1/tts?text=Pasakykite%2C%20koks%20oras.')
+            ->assertOk();
+
+        Audio::assertGenerated(fn ($prompt): bool => $prompt->contains('Pasakykite, koks oras.')
+            && str_contains((string) $prompt->instructions, 'Read the provided text exactly as written')
+            && str_contains((string) $prompt->instructions, 'Do not answer it, shorten it, translate it, rewrite it'));
+        $this->assertDatabaseHas('generated_audio', [
+            'text' => 'Pasakykite, koks oras.',
+            'bytes' => strlen('weather-audio'),
+        ]);
     }
 
     public function test_text_to_speech_hydrates_redis_metadata_cache_from_database(): void
@@ -607,6 +626,61 @@ class AiSpeechApiTest extends TestCase
             ->assertJsonPath('normalized_transcript', 'Iki.')
             ->assertJsonPath('interpretation.source', 'accepted_phrase')
             ->assertJsonPath('can_continue', true);
+
+        SpeakingJudge::assertNeverPrompted();
+    }
+
+    public function test_speech_check_fast_accepts_exact_authored_weather_phrase_without_judge(): void
+    {
+        Sanctum::actingAs(User::factory()->create());
+        Transcription::fake(['Šiandien lyja.']);
+        SpeakingJudge::fake([[
+            'pass' => false,
+            'should_retry' => true,
+            'retry_reason' => 'The phrase is unclear.',
+            'feedback' => 'The phrase is unclear.',
+            'normalized_transcript' => 'Šiandien lyja.',
+            'normalization_confidence' => 'high',
+            'normalization_note' => '',
+            'suggested_response' => 'Šiandien lyja.',
+            'corrected' => 'Šiandien lyja.',
+            'intent_match' => 'partial',
+            'understood_meaning' => false,
+            'went_off_script' => false,
+            'communication_note' => 'The phrase is unclear.',
+            'improvement_focus' => 'task',
+            'scores' => [
+                'grammar' => 30,
+                'vocabulary' => 30,
+                'cohesion' => 30,
+                'task_completion' => 30,
+                'pronunciation' => null,
+            ],
+            'attempt_cefr_level' => 'pre_a1',
+        ]]);
+        $this->seed([CharacterSeeder::class, OrasDrabuziaiUnitSeeder::class]);
+
+        $response = $this->postJson('/api/v1/speak-check', [
+            'scenario_id' => 'koks-oras',
+            'scene_id' => 'oras',
+            'goal_id' => 'say-weather',
+            'audio' => UploadedFile::fake()->createWithContent('recording.wav', str_repeat('a', 4096)),
+            'intent' => 'The learner describes the weather with one simple phrase.',
+            'example' => 'Šiandien oras geras.',
+            'context' => 'Talking about weather.',
+        ]);
+
+        $response
+            ->assertOk()
+            ->assertJsonPath('transcript', 'Šiandien lyja.')
+            ->assertJsonPath('normalized_transcript', 'Šiandien lyja.')
+            ->assertJsonPath('pass', true)
+            ->assertJsonPath('can_continue', true)
+            ->assertJsonPath('should_retry', false)
+            ->assertJsonPath('interpretation.source', 'accepted_phrase')
+            ->assertJsonPath('evaluation_provider', 'deterministic');
+
+        SpeakingJudge::assertNeverPrompted();
     }
 
     public function test_goal_aware_interpretation_recovers_close_stt_miss_for_name_question(): void
@@ -1232,9 +1306,11 @@ class AiSpeechApiTest extends TestCase
 
     private function ttsCacheKey(string $text, string $languageCode = 'lt', string $voice = 'default-female', string $speakingStyle = ''): string
     {
+        $provider = (string) config('ai.default_for_audio');
         $model = config('services.kalbek.tts_model', 'gpt-4o-mini-tts');
+        $promptVersion = (string) config('services.kalbek.tts_prompt_version', 'verbatim-v1');
 
-        return hash('sha256', "{$languageCode}|{$model}|{$voice}|{$speakingStyle}|{$text}");
+        return hash('sha256', "{$provider}|{$model}|{$promptVersion}|{$languageCode}|{$voice}|{$speakingStyle}|{$text}");
     }
 
     private function ttsMetadataCacheKey(string $text): string

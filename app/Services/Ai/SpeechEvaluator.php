@@ -76,7 +76,7 @@ class SpeechEvaluator implements SpeechEvaluatorContract
          * with the available models may be somewhat inaccurate.
          *
          * It uses the accepted phrases array to calculate a Levenshtein distance. The closest string in the array is used.
-        */
+         */
         $interpretation = (new SpeechInterpretation)->interpret(
             $transcript,
             $example,
@@ -87,6 +87,21 @@ class SpeechEvaluator implements SpeechEvaluatorContract
         $normalizedTranscript = $interpretation['transcript'];
         $contentCefrLevel = $this->validCefrLevel($contentCefrLevel, CefrLevel::A1->value);
         $learnerCefrLevel = $this->validCefrLevel($learnerCefrLevel, CefrLevel::PreA1->value);
+
+        if (
+            in_array($interpretation['source'], ['accepted_phrase', 'example_phrase'], true)
+            && $interpretation['confidence'] === 'high'
+            && ($interpretation['exact_match'] ?? false)
+        ) {
+            return $this->acceptedLessonPhraseResult(
+                $transcript,
+                $normalizedTranscript,
+                $interpretation,
+                $contentCefrLevel,
+                $feedbackLanguageCode,
+            );
+        }
+
         $acceptedPhraseText = collect($acceptedPhrases)->filter()->values()->implode(' | ');
         $verdict = $this->verdictArray(SpeakingJudge::make()->prompt(
             "Situation: {$context}\n"
@@ -193,6 +208,60 @@ class SpeechEvaluator implements SpeechEvaluatorContract
     private function verdictArray(StructuredAgentResponse|array $verdict): array
     {
         return $verdict instanceof StructuredAgentResponse ? $verdict->toArray() : $verdict;
+    }
+
+    /**
+     * @param  array{transcript: string, confidence: string, note: string, matched_phrase: string|null, source: string, exact_match?: bool}  $interpretation
+     * @return array{transcript: string, normalized_transcript: string, normalization_confidence: string, normalization_note: string, pass: bool, can_continue: bool, should_retry: bool, retry_reason: string, feedback: string, corrected: string, suggested_response: string, suggestion: string, communication: array{intent_match: string, understood_meaning: bool, went_off_script: bool, note: string, improvement_focus: string}, interpretation: array{confidence: string, note: string, matched_phrase: string|null, source: string, exact_match: bool}, scores: array{grammar: int, vocabulary: int, cohesion: int, task_completion: int, pronunciation: int|null}, overall_score: int, attempt_cefr_level: string, evaluation_provider: string, evaluation_model: string|null}
+     */
+    private function acceptedLessonPhraseResult(
+        string $transcript,
+        string $normalizedTranscript,
+        array $interpretation,
+        string $contentCefrLevel,
+        string $feedbackLanguageCode,
+    ): array {
+        $scores = [
+            'grammar' => 95,
+            'vocabulary' => 95,
+            'cohesion' => 95,
+            'task_completion' => 100,
+            'pronunciation' => null,
+        ];
+
+        return [
+            'transcript' => $transcript,
+            'normalized_transcript' => $normalizedTranscript,
+            'normalization_confidence' => 'high',
+            'normalization_note' => '',
+            'pass' => true,
+            'can_continue' => true,
+            'should_retry' => false,
+            'retry_reason' => '',
+            'feedback' => $this->localizedMessage('goal_answered', $feedbackLanguageCode),
+            'corrected' => $normalizedTranscript,
+            'suggested_response' => '',
+            'suggestion' => '',
+            'communication' => [
+                'intent_match' => 'full',
+                'understood_meaning' => true,
+                'went_off_script' => false,
+                'note' => $this->localizedMessage('goal_answered', $feedbackLanguageCode),
+                'improvement_focus' => 'none',
+            ],
+            'interpretation' => [
+                'confidence' => $interpretation['confidence'],
+                'note' => $interpretation['note'],
+                'matched_phrase' => $interpretation['matched_phrase'],
+                'source' => $interpretation['source'],
+                'exact_match' => (bool) ($interpretation['exact_match'] ?? false),
+            ],
+            'scores' => $scores,
+            'overall_score' => $this->overallScore($scores),
+            'attempt_cefr_level' => $contentCefrLevel,
+            'evaluation_provider' => 'deterministic',
+            'evaluation_model' => null,
+        ];
     }
 
     private function scoresFromVerdict(array $verdict): array

@@ -6,7 +6,7 @@ class SpeechInterpretation
 {
     /**
      * @param  array<int, string>  $acceptedPhrases
-     * @return array{transcript: string, confidence: string, note: string, matched_phrase: string|null, source: string}
+     * @return array{transcript: string, confidence: string, note: string, matched_phrase: string|null, source: string, exact_match: bool}
      */
     public function interpret(
         string $rawTranscript,
@@ -14,7 +14,30 @@ class SpeechInterpretation
         array $acceptedPhrases = [],
         string $feedbackLanguageCode = 'en',
     ): array {
+
+        return [
+            'transcript' => $rawTranscript,
+            'confidence' => 'high',
+            'note' => '',
+            'matched_phrase' => null,
+            'source' => 'transcript',
+            'exact_match' => false,
+        ];
+        // returning raw transcript. The below implementation is experimental. Potentially improves transcription and
+        // its cost. But needs closer implementation.
         $normalizedTranscript = $this->normalizeSmallArtifacts($rawTranscript);
+
+        if ($example !== '' && $this->comparisonText($normalizedTranscript) === $this->comparisonText($example)) {
+            return [
+                'transcript' => $example,
+                'confidence' => 'high',
+                'note' => '',
+                'matched_phrase' => $example,
+                'source' => 'example_phrase',
+                'exact_match' => true,
+            ];
+        }
+
         $candidates = $this->phrases($acceptedPhrases);
 
         $match = $this->bestPhraseMatch($normalizedTranscript, $candidates);
@@ -27,6 +50,7 @@ class SpeechInterpretation
                     : $this->message('medium_match', $feedbackLanguageCode),
                 'matched_phrase' => $match['phrase'],
                 'source' => 'accepted_phrase',
+                'exact_match' => $match['exact_match'],
             ];
         }
 
@@ -36,6 +60,7 @@ class SpeechInterpretation
             'note' => '',
             'matched_phrase' => null,
             'source' => 'transcript',
+            'exact_match' => false,
         ];
     }
 
@@ -55,7 +80,7 @@ class SpeechInterpretation
 
     /**
      * @param  array<int, string>  $phrases
-     * @return array{phrase: string, confidence: string}|null
+     * @return array{phrase: string, confidence: string, exact_match: bool}|null
      */
     private function bestPhraseMatch(string $transcript, array $phrases): ?array
     {
@@ -74,7 +99,7 @@ class SpeechInterpretation
             }
 
             if ($phraseKey === $transcriptKey) {
-                return ['phrase' => $phrase, 'confidence' => 'high'];
+                return ['phrase' => $phrase, 'confidence' => 'high', 'exact_match' => true];
             }
 
             similar_text($transcriptKey, $phraseKey, $percent);
@@ -89,9 +114,9 @@ class SpeechInterpretation
         }
 
         return match (true) {
-            $bestPercent >= 88 => ['phrase' => $bestPhrase, 'confidence' => 'high'],
-            $bestPercent >= 82 => ['phrase' => $bestPhrase, 'confidence' => 'medium'],
-            default => ['phrase' => $bestPhrase, 'confidence' => 'low'],
+            $bestPercent >= 88 => ['phrase' => $bestPhrase, 'confidence' => 'high', 'exact_match' => false],
+            $bestPercent >= 82 => ['phrase' => $bestPhrase, 'confidence' => 'medium', 'exact_match' => false],
+            default => ['phrase' => $bestPhrase, 'confidence' => 'low', 'exact_match' => false],
         };
     }
 

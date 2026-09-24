@@ -53,6 +53,7 @@ return [
         'ai_mode' => env('KALBEK_AI_MODE', 'live'),
         'transcription_model' => env('KALBEK_TRANSCRIPTION_MODEL', 'openai/gpt-4o-mini-transcribe'),
         'tts_model' => env('KALBEK_TTS_MODEL', 'gpt-4o-mini-tts'),
+        'tts_prompt_version' => env('KALBEK_TTS_PROMPT_VERSION', 'verbatim-v1'),
         'tts_voice_options' => [
             'gemini' => [
                 'Zephyr' => 'Zephyr - bright',

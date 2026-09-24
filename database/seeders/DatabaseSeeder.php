@@ -17,7 +17,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             LanguageSeeder::class,
             CharacterSeeder::class,
-            ScenarioSeeder::class,
+            UnitsSeeder::class,
         ]);
     }
 }
